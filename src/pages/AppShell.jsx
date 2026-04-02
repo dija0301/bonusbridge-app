@@ -38,12 +38,18 @@ export default function AppShell() {
       <aside className="w-56 shrink-0 flex flex-col bg-slate-900 border-r border-slate-800">
         {/* Wordmark */}
         <div className="flex items-center gap-2.5 px-5 h-16 border-b border-slate-800">
-          <div className="w-7 h-7 bg-brand-600 rounded-md flex items-center justify-center shrink-0">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <g transform="rotate(90, 8, 8)">
-                <path d="M4 3h5.5a2.5 2.5 0 0 1 0 5H4V3z" fill="white"/>
-                <path d="M4 8h6a2.5 2.5 0 0 1 0 5H4V8z" fill="white" fillOpacity="0.7"/>
-              </g>
+          <div className="flex items-center justify-center shrink-0">
+            <svg width="34" height="21" viewBox="0 0 80 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="4" y1="40" x2="76" y2="40" stroke="#818cf8" strokeWidth="5" strokeLinecap="round"/>
+              <line x1="4" y1="40" x2="4" y2="24" stroke="#818cf8" strokeWidth="3.5" strokeLinecap="round"/>
+              <line x1="40" y1="40" x2="40" y2="24" stroke="#818cf8" strokeWidth="3.5" strokeLinecap="round"/>
+              <line x1="76" y1="40" x2="76" y2="24" stroke="#818cf8" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M4 24 A18 10 0 0 1 40 24" stroke="#818cf8" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+              <path d="M40 24 A18 10 0 0 1 76 24" stroke="#818cf8" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+              <line x1="16" y1="14.6" x2="16" y2="40" stroke="#c7d2fe" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/>
+              <line x1="28" y1="14.6" x2="28" y2="40" stroke="#c7d2fe" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/>
+              <line x1="52" y1="14.6" x2="52" y2="40" stroke="#c7d2fe" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/>
+              <line x1="64" y1="14.6" x2="64" y2="40" stroke="#c7d2fe" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/>
             </svg>
           </div>
           <span className="text-white font-semibold text-base tracking-tight">BonusBridge</span>
