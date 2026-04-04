@@ -150,7 +150,7 @@ function RecipientDrawer({ issuerId, recipient, onClose, onSaved }) {
       is_active:         true,
     }
 
-    let err
+    let err, data
     if (isEdit) {
       ;({ error: err } = await supabase.from('recipients').update(payload).eq('id', recipient.id))
     } else {
