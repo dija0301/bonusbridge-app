@@ -157,7 +157,6 @@ function RecipientDrawer({ issuerId, recipient, onClose, onSaved }) {
       ;({ error: err } = await supabase.from('recipients').insert(payload))
     }
 
-    console.log('Save result:', {err,data,payload})
     setSaving(false)
     if (err) { setError(err.message); return }
     onSaved()
