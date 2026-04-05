@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { estimateBalanceAtDate } from '../../lib/amortization'
 
 // ── Helpers ────────────────────────────────────────────────
 const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -50,46 +51,56 @@ function EligPill({ label }) {
 
 // ── Balance estimator ──────────────────────────────────────
 function BalanceEstimator({ agreement }) {
-  const [date, setDate]       = useState('')
-  const [estimate, setEstimate] = useState(null)
+  const [date, setDate]         = useState('')
+  const [result, setResult]     = useState(null)
 
   function calculate() {
-    if (!date || !agreement) return
-    const termDate     = new Date(date + 'T00:00:00')
-    const startDate    = agreement.forgiveness_start_date ? new Date(agreement.forgiveness_start_date + 'T00:00:00') : null
-    const principal    = parseFloat(agreement.principal_amount) || 0
-    const periods      = parseInt(agreement.forgiveness_periods) || 0
-    const forgivenPerPd = periods > 0 ? principal / periods : 0
-
-    if (!startDate || termDate <= startDate) { setEstimate(principal); return }
-
-    const daysElapsed   = (termDate - startDate) / (1000 * 60 * 60 * 24)
-    const ppy           = { biweekly: 26, semi_monthly: 24, monthly: 12, quarterly: 4, annual: 1, custom: 12 }[agreement.forgiveness_frequency] ?? 12
-    const periodsElapsed = Math.min(Math.floor(daysElapsed / (365 / ppy)), periods)
-    const balance        = Math.max(principal - (forgivenPerPd * periodsElapsed), 0)
-    setEstimate(balance)
+    if (!date) return
+    const est = estimateBalanceAtDate(agreement, date)
+    setResult(est)
   }
+
+  const fmtD = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n ?? 0)
 
   return (
     <div className="bg-slate-800/40 border border-slate-700 rounded-2xl p-5">
       <h4 className="text-white font-semibold mb-1">Repayment Estimator</h4>
-      <p className="text-slate-400 text-sm mb-4">Enter a hypothetical departure date to estimate your repayment obligation. This is an estimate only — your actual amount is determined by your employer.</p>
+      <p className="text-slate-400 text-sm mb-4">Enter a hypothetical departure date to estimate your repayment obligation. This is an estimate only — your actual amount is determined by your employer and may differ based on final calculations.</p>
       <div className="flex gap-3 mb-4">
-        <input type="date" value={date} onChange={e => { setDate(e.target.value); setEstimate(null) }}
+        <input type="date" value={date} onChange={e => { setDate(e.target.value); setResult(null) }}
           className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
         <button onClick={calculate} disabled={!date}
           className="px-5 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white text-sm font-medium transition">
           Estimate
         </button>
       </div>
-      {estimate !== null && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 text-center">
-          <p className="text-slate-400 text-sm mb-1">Estimated repayment obligation</p>
-          <p className={`text-3xl font-bold font-mono mb-2 ${estimate === 0 ? 'text-emerald-400' : 'text-white'}`}>{fmt(estimate)}</p>
-          {estimate === 0
-            ? <p className="text-emerald-400 text-sm">Fully forgiven by this date</p>
-            : <p className="text-slate-500 text-xs">This is an estimate based on your forgiveness schedule. Actual amounts are subject to review and confirmation by your employer. Interest and other adjustments may apply.</p>
-          }
+      {result !== null && (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
+          <div className="text-center mb-4">
+            <p className="text-slate-400 text-sm mb-1">Estimated repayment obligation</p>
+            <p className={`text-3xl font-bold font-mono mb-1 ${result.balance === 0 ? 'text-emerald-400' : 'text-white'}`}>
+              {fmtD(result.balance)}
+            </p>
+            {result.balance === 0
+              ? <p className="text-emerald-400 text-sm">Fully forgiven by this date</p>
+              : null
+            }
+          </div>
+          {result.balance > 0 && (
+            <div className="border-t border-slate-700 pt-4 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-slate-500 mb-0.5">Periods Completed</p>
+                <p className="text-slate-200 font-mono">{result.periodsElapsed} of {agreement.forgiveness_periods}</p>
+              </div>
+              <div>
+                <p className="text-slate-500 mb-0.5">Total Forgiven to Date</p>
+                <p className="text-emerald-400 font-mono">{fmtD(result.forgivenToDate)}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-slate-500 text-xs mt-2 leading-relaxed">This estimate includes principal and accrued interest. Actual amounts are subject to review and confirmation by your employer. Interest calculations and other adjustments may apply.</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
