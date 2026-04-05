@@ -300,6 +300,136 @@ function RecipientDrawer({ issuerId, recipient, onClose, onSaved }) {
   )
 }
 
+// ── Detail panel (read-only) ───────────────────────────────
+function RecipientDetailPanel({ recipient: r, onClose, onEdit, onInvite }) {
+  const iStatus = inviteStatus(r)
+  const { label, cls } = INVITE_STATUS[iStatus]
+  const fmtDt = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+  const fmtTm = d => d ? new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+
+  function Row({ label, value }) {
+    return value ? (
+      <div>
+        <p className="text-slate-500 text-xs mb-0.5">{label}</p>
+        <p className="text-slate-200 text-sm">{value}</p>
+      </div>
+    ) : null
+  }
+
+  function Section({ title, children }) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">{title}</span>
+          <div className="flex-1 h-px bg-slate-800" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">{children}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/50" onClick={onClose} />
+      <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 flex flex-col h-full">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+          <div>
+            <h2 className="text-white font-semibold">{r.first_name} {r.last_name}</h2>
+            <p className="text-slate-400 text-sm mt-0.5">{r.title || ''}{r.title && r.department ? ' · ' : ''}{r.department || ''}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition p-1 mt-0.5">
+            <XIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+
+          {/* Status badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${cls}`}>{label}</span>
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${r.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+              {r.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+
+          <Section title="Identity">
+            <Row label="Employee ID"  value={r.employee_id} />
+            <Row label="Start Date"   value={fmtDt(r.start_date)} />
+            <Row label="Termination"  value={fmtDt(r.termination_date)} />
+            <div />
+          </Section>
+
+          <Section title="Work Contact">
+            <Row label="Work Email"  value={r.email} />
+            <Row label="Work Phone"  value={r.work_phone} />
+          </Section>
+
+          <Section title="Personal Contact">
+            <Row label="Personal Email" value={r.personal_email} />
+            <Row label="Mobile Phone"   value={r.mobile_phone} />
+            <div className="col-span-2">
+              <Row label="Preferred Contact" value={r.preferred_contact?.replace(/_/g, ' ')} />
+            </div>
+          </Section>
+
+          {(r.address_line1 || r.city) && (
+            <Section title="Mailing Address">
+              <div className="col-span-2 flex flex-col gap-0.5">
+                {r.address_line1 && <p className="text-slate-200 text-sm">{r.address_line1}</p>}
+                {r.address_line2 && <p className="text-slate-200 text-sm">{r.address_line2}</p>}
+                {(r.city || r.state || r.zip) && (
+                  <p className="text-slate-200 text-sm">{[r.city, r.state, r.zip].filter(Boolean).join(', ')}</p>
+                )}
+              </div>
+            </Section>
+          )}
+
+          <Section title="Portal Activity">
+            <div>
+              <p className="text-slate-500 text-xs mb-0.5">Last Login</p>
+              {r.last_login_at
+                ? <div>
+                    <p className="text-slate-200 text-sm">{fmtDt(r.last_login_at)}</p>
+                    <p className="text-slate-500 text-xs">{fmtTm(r.last_login_at)}</p>
+                  </div>
+                : <p className="text-slate-600 text-sm italic">Never logged in</p>
+              }
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs mb-0.5">Agreements</p>
+              <p className="text-slate-200 text-sm font-mono">{r.agreements?.length ?? 0}</p>
+            </div>
+          </Section>
+
+          {r.notes && (
+            <div>
+              <p className="text-slate-500 text-xs mb-1">Internal Notes</p>
+              <p className="text-slate-300 text-sm leading-relaxed">{r.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex gap-3">
+          {iStatus === 'none' && r.is_active && (
+            <button onClick={() => onInvite(r)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition">
+              <MailIcon className="w-4 h-4" /> Send Invite
+            </button>
+          )}
+          <button onClick={() => onEdit(r)}
+            className="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">
+            Edit Recipient
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────
 const FILTER_OPTIONS = [
   { value: 'all',        label: 'All'        },
@@ -317,6 +447,7 @@ export default function Recipients() {
   const [error, setError]           = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing]       = useState(null)
+  const [viewing, setViewing]       = useState(null)
   const [inviting, setInviting]     = useState(null)
   const [confirming, setConfirming] = useState(null)
   const [search, setSearch]         = useState('')
@@ -442,9 +573,10 @@ export default function Recipients() {
                   const iStatus = inviteStatus(r)
                   const { label, cls } = INVITE_STATUS[iStatus]
                   return (
-                    <tr key={r.id} className={`hover:bg-slate-800/30 transition ${!r.is_active ? 'opacity-50' : ''}`}>
+                    <tr key={r.id} className={`hover:bg-slate-800/30 transition cursor-pointer ${!r.is_active ? 'opacity-50' : ''}`}
+                        onClick={() => setViewing(r)}>
                       <td className="px-5 py-3.5">
-                        <p className="text-slate-200 font-medium">{r.first_name} {r.last_name}</p>
+                        <p className="text-brand-400 hover:text-brand-300 font-medium transition">{r.first_name} {r.last_name}</p>
                         {r.employee_id && <p className="text-slate-500 text-xs mt-0.5">ID: {r.employee_id}</p>}
                         {!r.is_active && <span className="text-xs text-red-400">Inactive</span>}
                       </td>
@@ -472,7 +604,7 @@ export default function Recipients() {
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>{label}</span>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2 flex-wrap">
                           {iStatus === 'none' && r.is_active && (
                             <button
@@ -514,6 +646,15 @@ export default function Recipients() {
           recipient={editing}
           onClose={closeDrawer}
           onSaved={onSaved}
+        />
+      )}
+
+      {viewing && (
+        <RecipientDetailPanel
+          recipient={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={r => { setViewing(null); openEdit(r) }}
+          onInvite={r => { setViewing(null); sendInvite(r) }}
         />
       )}
 
