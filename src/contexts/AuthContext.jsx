@@ -6,31 +6,52 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading
   const [profile, setProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
 
   useEffect(() => {
     // Grab initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) fetchProfile(session.user.id)
+      else setSession(null) // explicitly null so loading ends
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setSession(null)
+        setProfile(null)
+        return
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(session)
+        if (session) fetchProfile(session.user.id)
+        return
+      }
+      // Fallback
       setSession(session)
       if (session) fetchProfile(session.user.id)
-      else setProfile(null)
+      else { setSession(null); setProfile(null) }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*, issuers(id, name)')
-      .eq('id', userId)
-      .single()
-    setProfile(data)
+    setProfileLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, issuers(id, name)')
+        .eq('id', userId)
+        .single()
+      if (error) throw error
+      setProfile(data)
+    } catch {
+      setProfile(null)
+    } finally {
+      setProfileLoading(false)
+    }
   }
 
   async function signIn(email, password) {
@@ -40,17 +61,18 @@ export function AuthProvider({ children }) {
 
   async function signOut() {
     await supabase.auth.signOut()
+    setSession(null)
+    setProfile(null)
   }
 
-  const role = profile?.role ?? null // 'issuer_admin' | 'recipient' | 'admin'
-
-  // Convenience: composed full name
+  const role        = profile?.role ?? null
   const displayName = profile
     ? [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.email
     : null
+  const loading     = session === undefined || (!!session && profileLoading)
 
   return (
-    <AuthContext.Provider value={{ session, profile, role, displayName, signIn, signOut, loading: session === undefined }}>
+    <AuthContext.Provider value={{ session, profile, role, displayName, signIn, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   )
@@ -61,4 +83,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
-// ctx shape: { session, profile, role, displayName, signIn, signOut, loading }
