@@ -9,6 +9,7 @@ import IssuerOverview from './pages/issuer/Overview'
 import Agreements from './pages/issuer/Agreements'
 import Recipients from './pages/issuer/Recipients'
 import Collections from './pages/issuer/Collections'
+import RecipientPortal from './pages/recipient/Portal'
 
 function RoleRedirect() {
   const { role, loading } = useAuth()
@@ -48,17 +49,15 @@ export default function App() {
             <Route path="collections" element={<Collections />} />
           </Route>
 
-          {/* Recipient portal — placeholder for now */}
+          {/* Recipient portal */}
           <Route
             path="/recipient"
             element={
               <ProtectedRoute allowedRoles={['recipient']}>
-                <AppShell />
+                <RecipientPortal />
               </ProtectedRoute>
             }
-          >
-            <Route index element={<div className="p-8 text-white">Recipient dashboard — coming soon</div>} />
-          </Route>
+          />
 
           {/* Admin portal — placeholder */}
           <Route
