@@ -432,6 +432,7 @@ export default function Recipients() {
                   <th className="text-left px-5 py-3 font-medium">Contact</th>
                   <th className="text-left px-5 py-3 font-medium">Role</th>
                   <th className="text-left px-5 py-3 font-medium">Agreements</th>
+                  <th className="text-left px-5 py-3 font-medium">Last Login</th>
                   <th className="text-left px-5 py-3 font-medium">Portal</th>
                   <th className="text-right px-5 py-3 font-medium">Actions</th>
                 </tr>
@@ -458,6 +459,15 @@ export default function Recipients() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span className="text-slate-300 font-mono">{r.agreements?.length ?? 0}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {r.last_login_at
+                          ? <div>
+                              <p className="text-slate-300 text-xs">{new Date(r.last_login_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                              <p className="text-slate-500 text-xs">{new Date(r.last_login_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                            </div>
+                          : <span className="text-slate-600 text-xs italic">Never</span>
+                        }
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>{label}</span>
