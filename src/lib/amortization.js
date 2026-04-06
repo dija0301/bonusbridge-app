@@ -1,15 +1,17 @@
 /**
  * BonusBridge Amortization Engine
- * 
- * Correct TVM calculation for forgivable promissory notes.
- * 
+ *
+ * Standard amortizing loan mechanics for forgivable promissory notes.
+ *
  * Key concepts:
  * - Interest accrues from disbursement date (when funds were paid)
- * - Forgiveness begins on forgiveness_start_date (when employee starts)
+ * - Forgiveness begins on forgiveness_start_date
  * - Gap between disbursement and forgiveness start = pre-forgiveness interest accrual
- * - Each period: forgiven principal (constant) + forgiven interest (declining) = total forgiven (taxable)
- * - Outstanding balance decreases by forgiven principal each period
- * - Forgiven interest is calculated on opening balance for that period
+ *   added to opening balance before Period 1
+ * - Each period has a FIXED total forgiven amount (like a mortgage payment)
+ * - Interest portion = outstanding balance × period rate (DECREASING each period)
+ * - Principal portion = total forgiven − interest (INCREASING each period)
+ * - Both forgiven principal + forgiven interest = taxable income each period
  */
 
 const PERIODS_PER_YEAR = {
@@ -23,13 +25,7 @@ const PERIODS_PER_YEAR = {
 
 /**
  * Calculate pre-forgiveness accrued interest.
- * This is simple daily interest from disbursement to forgiveness start.
- * 
- * @param {number} principal
- * @param {number} annualRatePct - e.g. 5.27 for 5.27%
- * @param {string|Date} disbursementDate
- * @param {string|Date} forgivenessStartDate
- * @returns {number} accrued interest amount
+ * Simple daily interest from disbursement to forgiveness start.
  */
 export function calcPreForgivenessInterest(principal, annualRatePct, disbursementDate, forgivenessStartDate) {
   if (!disbursementDate || !forgivenessStartDate || !annualRatePct) return 0
@@ -41,16 +37,16 @@ export function calcPreForgivenessInterest(principal, annualRatePct, disbursemen
 }
 
 /**
+ * Calculate fixed payment amount using standard amortization formula.
+ * If rate is 0, payment = principal / periods (straight line).
+ */
+function calcFixedPayment(openingBalance, periodRate, periods) {
+  if (periodRate === 0) return openingBalance / periods
+  return openingBalance * (periodRate * Math.pow(1 + periodRate, periods)) / (Math.pow(1 + periodRate, periods) - 1)
+}
+
+/**
  * Generate full amortization schedule for a promissory note.
- * 
- * @param {object} params
- * @param {number}  params.principal           - Original principal amount
- * @param {number}  params.annualRatePct        - Annual interest rate (e.g. 5.27)
- * @param {number}  params.periods             - Total forgiveness periods
- * @param {string}  params.frequency           - biweekly | semi_monthly | monthly | quarterly | annual | custom
- * @param {string}  [params.disbursementDate]  - Date funds were paid (interest starts here)
- * @param {string}  [params.forgivenessStartDate] - Date forgiveness begins
- * @returns {object} schedule summary + period array
  */
 export function generateAmortizationSchedule({
   principal,
@@ -66,45 +62,40 @@ export function generateAmortizationSchedule({
   const rate       = parseFloat(annualRatePct) || 0
   const periodRate = rate / 100 / ppy
 
-  // Pre-forgiveness accrued interest (added to opening balance of Period 1)
+  // Pre-forgiveness accrued interest added to opening balance
   const preAccruedInterest = calcPreForgivenessInterest(
     principal, rate, disbursementDate, forgivenessStartDate
   )
+  const openingBalance = principal + preAccruedInterest
 
-  // Opening balance includes any pre-accrued interest
-  const openingBalance    = principal + preAccruedInterest
-  const forgivenPrincipalPerPeriod = principal / periods
+  // Fixed payment per period (constant throughout)
+  const fixedPayment = calcFixedPayment(openingBalance, periodRate, periods)
 
   const schedule = []
   let balance = openingBalance
-
   let totalForgivenPrincipal = 0
   let totalForgivenInterest  = 0
-  let totalForgiven          = 0
 
   for (let i = 1; i <= periods; i++) {
-    const forgivenInterest   = balance * periodRate
-    const forgivenPrincipal  = forgivenPrincipalPerPeriod
-    const totalForgivenPeriod = forgivenPrincipal + forgivenInterest
-    const closingBalance     = Math.max(balance - forgivenPrincipal, 0)
+    const forgivenInterest  = balance * periodRate
+    const forgivenPrincipal = fixedPayment - forgivenInterest
+    const closingBalance    = Math.max(balance - forgivenPrincipal, 0)
 
     schedule.push({
       period:           i,
       openingBalance:   balance,
-      forgivenPrincipal,
       forgivenInterest,
-      totalForgiven:    totalForgivenPeriod, // this is taxable income / imputed income
+      forgivenPrincipal,
+      totalForgiven:    fixedPayment, // constant — this is taxable income each period
       closingBalance,
     })
 
     totalForgivenPrincipal += forgivenPrincipal
     totalForgivenInterest  += forgivenInterest
-    totalForgiven          += totalForgivenPeriod
     balance                 = closingBalance
   }
 
   return {
-    // Summary
     principal,
     annualRatePct:          rate,
     periods,
@@ -112,25 +103,21 @@ export function generateAmortizationSchedule({
     periodsPerYear:         ppy,
     preAccruedInterest,
     openingBalance,
-    forgivenPrincipalPerPeriod,
+    fixedPayment,           // same every period
 
-    // Per-period (first period — for preview display)
     firstPeriod: schedule[0],
     lastPeriod:  schedule[schedule.length - 1],
 
-    // Totals
     totalForgivenPrincipal,
     totalForgivenInterest,
-    totalForgiven,           // total taxable income over life of note
+    totalForgiven: totalForgivenPrincipal + totalForgivenInterest,
 
-    // Full schedule array
     schedule,
   }
 }
 
 /**
- * Quick preview summary — used in the form live preview.
- * Returns just the numbers needed for display without the full schedule array.
+ * Quick preview summary for the form live preview.
  */
 export function amortPreview({
   principal,
@@ -147,43 +134,37 @@ export function amortPreview({
   if (!result) return null
 
   return {
-    // Pre-forgiveness
-    preAccruedInterest:          result.preAccruedInterest,
-    openingBalance:              result.openingBalance,
+    preAccruedInterest:         result.preAccruedInterest,
+    openingBalance:             result.openingBalance,
+    fixedPayment:               result.fixedPayment,        // constant total forgiven per period
 
-    // Period 1 (highest interest, good for showing the range)
-    period1ForgivenPrincipal:    result.firstPeriod.forgivenPrincipal,
-    period1ForgivenInterest:     result.firstPeriod.forgivenInterest,
-    period1TotalForgiven:        result.firstPeriod.totalForgiven,
+    // Period 1 — highest interest, lowest principal
+    period1ForgivenInterest:    result.firstPeriod.forgivenInterest,
+    period1ForgivenPrincipal:   result.firstPeriod.forgivenPrincipal,
 
-    // Last period (lowest interest)
+    // Last period — lowest interest, highest principal
     lastPeriodForgivenInterest:  result.lastPeriod.forgivenInterest,
-    lastPeriodTotalForgiven:     result.lastPeriod.totalForgiven,
+    lastPeriodForgivenPrincipal: result.lastPeriod.forgivenPrincipal,
 
-    // Life of note totals
-    totalForgivenPrincipal:      result.totalForgivenPrincipal,
-    totalForgivenInterest:       result.totalForgivenInterest,
-    totalForgiven:               result.totalForgiven,
+    totalForgivenPrincipal:     result.totalForgivenPrincipal,
+    totalForgivenInterest:      result.totalForgivenInterest,
+    totalForgiven:              result.totalForgiven,
 
-    periodsPerYear:              result.periodsPerYear,
+    periodsPerYear:             result.periodsPerYear,
   }
 }
 
 /**
  * Estimate outstanding balance at a given date.
  * Used in the recipient portal balance estimator.
- * 
- * @param {object} agreement - agreement record from Supabase
- * @param {string} hypotheticalDate - YYYY-MM-DD
- * @returns {object} { balance, periodsElapsed, forgivenToDate, accruedInterestToDate }
  */
 export function estimateBalanceAtDate(agreement, hypotheticalDate) {
-  const principal     = parseFloat(agreement.principal_amount) || 0
-  const ratePct       = parseFloat(agreement.interest_rate) || 0
-  const periods       = parseInt(agreement.forgiveness_periods) || 0
-  const frequency     = agreement.forgiveness_frequency
-  const startDate     = agreement.forgiveness_start_date
-  const disbDate      = agreement.custom_terms?.disbursement_date ?? startDate
+  const principal  = parseFloat(agreement.principal_amount) || 0
+  const ratePct    = parseFloat(agreement.interest_rate) || 0
+  const periods    = parseInt(agreement.forgiveness_periods) || 0
+  const frequency  = agreement.forgiveness_frequency
+  const startDate  = agreement.forgiveness_start_date
+  const disbDate   = agreement.custom_terms?.disbursement_date ?? startDate
 
   if (!principal || !periods || !startDate) {
     return { balance: principal, periodsElapsed: 0, forgivenToDate: 0, accruedInterestToDate: 0 }
@@ -192,44 +173,36 @@ export function estimateBalanceAtDate(agreement, hypotheticalDate) {
   const termDate  = new Date(hypotheticalDate + 'T00:00:00')
   const forgStart = new Date(startDate + 'T00:00:00')
 
-  // If departure is before forgiveness starts, full balance including pre-accrued interest
+  // Before forgiveness starts — full balance including pre-accrued interest to term date
   const preAccrued = calcPreForgivenessInterest(principal, ratePct, disbDate, startDate)
   if (termDate <= forgStart) {
-    const daysBeforeStart = Math.max((termDate - new Date(disbDate + 'T00:00:00')) / (1000 * 60 * 60 * 24), 0)
+    const daysBeforeStart = Math.max((termDate - new Date((disbDate ?? startDate) + 'T00:00:00')) / (1000 * 60 * 60 * 24), 0)
     const accruedToTerm   = principal * (ratePct / 100) * (daysBeforeStart / 365)
     return {
-      balance:              principal + accruedToTerm,
-      periodsElapsed:       0,
-      forgivenToDate:       0,
+      balance:               principal + accruedToTerm,
+      periodsElapsed:        0,
+      forgivenToDate:        0,
       accruedInterestToDate: accruedToTerm,
     }
   }
 
-  // Generate full schedule and find how many periods have elapsed
   const result = generateAmortizationSchedule({
     principal, annualRatePct: ratePct, periods, frequency,
     disbursementDate: disbDate, forgivenessStartDate: startDate,
   })
   if (!result) return { balance: principal, periodsElapsed: 0, forgivenToDate: 0, accruedInterestToDate: 0 }
 
-  const ppy           = PERIODS_PER_YEAR[frequency] ?? 12
-  const daysPerPeriod = 365 / ppy
-  const daysElapsed   = (termDate - forgStart) / (1000 * 60 * 60 * 24)
+  const ppy            = PERIODS_PER_YEAR[frequency] ?? 12
+  const daysPerPeriod  = 365 / ppy
+  const daysElapsed    = (termDate - forgStart) / (1000 * 60 * 60 * 24)
   const periodsElapsed = Math.min(Math.floor(daysElapsed / daysPerPeriod), periods)
 
   if (periodsElapsed >= periods) {
     return { balance: 0, periodsElapsed: periods, forgivenToDate: result.totalForgiven, accruedInterestToDate: result.totalForgivenInterest }
   }
 
-  // Sum up forgiven amounts through elapsed periods
-  const forgivenToDate = result.schedule
-    .slice(0, periodsElapsed)
-    .reduce((s, p) => s + p.totalForgiven, 0)
-
-  const accruedInterestToDate = result.schedule
-    .slice(0, periodsElapsed)
-    .reduce((s, p) => s + p.forgivenInterest, 0)
-
+  const forgivenToDate = result.schedule.slice(0, periodsElapsed).reduce((s, p) => s + p.totalForgiven, 0)
+  const accruedInterestToDate = result.schedule.slice(0, periodsElapsed).reduce((s, p) => s + p.forgivenInterest, 0)
   const balance = result.schedule[periodsElapsed]?.openingBalance ?? 0
 
   return { balance, periodsElapsed, forgivenToDate, accruedInterestToDate }

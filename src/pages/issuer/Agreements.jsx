@@ -289,10 +289,11 @@ function SigningBonusForm({ form, set }) {
           <p className="text-xs font-semibold text-slate-400 mb-2">Per Period</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <p className="text-slate-500 text-xs">Forgiven Principal</p>
-              <p className="text-white font-mono font-semibold">{fmtD(preview.period1ForgivenPrincipal)}</p>
+              <p className="text-slate-500 text-xs">Total Forgiven per Period — Taxable Income</p>
+              <p className="text-brand-400 font-mono font-semibold">{fmtD(preview.fixedPayment)}</p>
               <p className="text-slate-600 text-xs">constant each period</p>
             </div>
+            <div />
             <div>
               <p className="text-slate-500 text-xs">Forgiven Interest</p>
               <p className="text-white font-mono font-semibold">
@@ -301,17 +302,17 @@ function SigningBonusForm({ form, set }) {
                   <span className="text-slate-500 text-xs font-normal"> → {fmtD(preview.lastPeriodForgivenInterest)}</span>
                 )}
               </p>
-              <p className="text-slate-600 text-xs">declines each period</p>
+              <p className="text-slate-600 text-xs">decreases each period</p>
             </div>
-            <div className="col-span-2">
-              <p className="text-slate-500 text-xs">Total Forgiven per Period — Taxable Income</p>
-              <p className="text-brand-400 font-mono font-semibold">
-                {fmtD(preview.period1TotalForgiven)}
-                {preview.lastPeriodTotalForgiven < preview.period1TotalForgiven && (
-                  <span className="text-slate-500 text-xs font-normal"> → {fmtD(preview.lastPeriodTotalForgiven)}</span>
+            <div>
+              <p className="text-slate-500 text-xs">Forgiven Principal</p>
+              <p className="text-white font-mono font-semibold">
+                {fmtD(preview.period1ForgivenPrincipal)}
+                {preview.lastPeriodForgivenPrincipal > preview.period1ForgivenPrincipal && (
+                  <span className="text-slate-500 text-xs font-normal"> → {fmtD(preview.lastPeriodForgivenPrincipal)}</span>
                 )}
               </p>
-              <p className="text-slate-600 text-xs">principal plus interest — reported to payroll each period</p>
+              <p className="text-slate-600 text-xs">increases each period</p>
             </div>
           </div>
 
