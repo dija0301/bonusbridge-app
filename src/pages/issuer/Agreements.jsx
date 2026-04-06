@@ -599,15 +599,26 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
 
     Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k])
 
-    let err
+    let err, savedId
     if (isEdit) {
       ;({ error: err } = await supabase.from('agreements').update(payload).eq('id', agreement.id))
+      savedId = agreement.id
     } else {
-      ;({ error: err } = await supabase.from('agreements').insert(payload))
+      const { data: inserted, error: insertErr } = await supabase.from('agreements').insert(payload).select('id').single()
+      err     = insertErr
+      savedId = inserted?.id
     }
 
     setSaving(false)
     if (err) { setError(err.message); return }
+
+    // Fire amortization schedule generation for signing and starting bonuses
+    if (savedId && ['signing_bonus', 'starting_bonus'].includes(form.bonus_type)) {
+      supabase.functions.invoke('generate-amortization', {
+        body: { agreement_id: savedId }
+      }).catch(e => console.warn('Amortization generation failed:', e))
+    }
+
     onSaved()
   }
 

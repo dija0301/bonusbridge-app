@@ -474,8 +474,14 @@ export default function Recipients() {
 
   async function sendInvite(r) {
     setInviting(r.id)
-    await supabase.from('recipients').update({ invite_sent_at: new Date().toISOString() }).eq('id', r.id)
-    alert('Invite logged. Full email delivery coming in the next build.')
+    const { error } = await supabase.functions.invoke('invite-recipient', {
+      body: { recipient_id: r.id }
+    })
+    if (error) {
+      alert(`Failed to send invite: ${error.message}`)
+    } else {
+      alert(`Invite sent to ${r.email}`)
+    }
     setInviting(null)
     load()
   }
