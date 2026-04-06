@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { amortPreview } from '../../lib/amortization'
 
 // ── Constants ──────────────────────────────────────────────
 const BONUS_TYPES = [
@@ -131,17 +132,6 @@ function SectionLabel({ children }) {
 }
 
 // ── Amortization preview ───────────────────────────────────
-function calcAmort(principal, ratePct, periods, frequency) {
-  if (!principal || !periods || periods < 1) return null
-  const ppy = { biweekly: 26, semi_monthly: 24, monthly: 12, quarterly: 4, annual: 1, custom: 12 }[frequency] ?? 12
-  const rate = parseFloat(ratePct) || 0
-  return {
-    forgivePerPeriod: principal / periods,
-    imputedPerPeriod: principal * (rate / 100) / ppy,
-    totalImputed:     principal * (rate / 100) / ppy * periods,
-  }
-}
-
 // ── Milestone / installment row ────────────────────────────
 function MilestoneRow({ index, data, onChange, onRemove, type }) {
   const set = (k, v) => onChange(index, { ...data, [k]: v })
@@ -241,7 +231,17 @@ function EligibilitySection({ form, set }) {
 function SigningBonusForm({ form, set }) {
   const principal = parseFloat(form.principal_amount)
   const periods   = parseInt(form.forgiveness_periods)
-  const amort     = calcAmort(principal, form.interest_rate, periods, form.forgiveness_frequency)
+  const preview   = amortPreview({
+    principal,
+    annualRatePct:        parseFloat(form.interest_rate) || 0,
+    periods,
+    frequency:            form.forgiveness_frequency,
+    disbursementDate:     form.pn_dates_differ ? form.disbursement_date : form.execution_date,
+    forgivenessStartDate: form.forgiveness_start_date,
+  })
+
+  const fmtD = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n ?? 0)
+  const fmtS = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
 
   return (
     <>
@@ -264,26 +264,71 @@ function SigningBonusForm({ form, set }) {
           hint="Total number of forgiveness periods" />
       </div>
 
-      {amort && principal && periods && (
+      {preview && principal > 0 && periods > 0 && (
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Schedule Preview</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-slate-500 text-xs">Forgiven per period</p>
-              <p className="text-white font-mono font-semibold">{fmt(amort.forgivePerPeriod)}</p>
-            </div>
-            {parseFloat(form.interest_rate) > 0 && (
-              <>
+
+          {/* Pre-forgiveness interest accrual */}
+          {preview.preAccruedInterest > 0 && (
+            <div className="mb-3 pb-3 border-b border-slate-700">
+              <p className="text-xs font-semibold text-slate-400 mb-2">Pre-Forgiveness Period</p>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-slate-500 text-xs">Imputed income per period</p>
-                  <p className="text-white font-mono font-semibold">{fmt(amort.imputedPerPeriod)}</p>
+                  <p className="text-slate-500 text-xs">Accrued Interest Before Start</p>
+                  <p className="text-yellow-400 font-mono font-semibold">{fmtD(preview.preAccruedInterest)}</p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-slate-500 text-xs">Total imputed income over life of note</p>
-                  <p className="text-brand-400 font-mono font-semibold">{fmt(amort.totalImputed)}</p>
+                <div>
+                  <p className="text-slate-500 text-xs">Opening Balance at Forgiveness Start</p>
+                  <p className="text-white font-mono font-semibold">{fmtD(preview.openingBalance)}</p>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          )}
+
+          {/* Per-period breakdown */}
+          <p className="text-xs font-semibold text-slate-400 mb-2">Per Period</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <p className="text-slate-500 text-xs">Forgiven Principal</p>
+              <p className="text-white font-mono font-semibold">{fmtD(preview.period1ForgivenPrincipal)}</p>
+              <p className="text-slate-600 text-xs">constant each period</p>
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs">Forgiven Interest</p>
+              <p className="text-white font-mono font-semibold">
+                {fmtD(preview.period1ForgivenInterest)}
+                {preview.lastPeriodForgivenInterest < preview.period1ForgivenInterest && (
+                  <span className="text-slate-500 text-xs font-normal"> → {fmtD(preview.lastPeriodForgivenInterest)}</span>
+                )}
+              </p>
+              <p className="text-slate-600 text-xs">declines each period</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-slate-500 text-xs">Total Forgiven per Period — Taxable Income</p>
+              <p className="text-brand-400 font-mono font-semibold">
+                {fmtD(preview.period1TotalForgiven)}
+                {preview.lastPeriodTotalForgiven < preview.period1TotalForgiven && (
+                  <span className="text-slate-500 text-xs font-normal"> → {fmtD(preview.lastPeriodTotalForgiven)}</span>
+                )}
+              </p>
+              <p className="text-slate-600 text-xs">principal plus interest — reported to payroll each period</p>
+            </div>
+          </div>
+
+          {/* Life of note totals */}
+          <div className="border-t border-slate-700 pt-3 grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-slate-500 text-xs">Total Principal Forgiven</p>
+              <p className="text-white font-mono text-sm font-semibold">{fmtS(preview.totalForgivenPrincipal)}</p>
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs">Total Interest Forgiven</p>
+              <p className="text-white font-mono text-sm font-semibold">{fmtS(preview.totalForgivenInterest)}</p>
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs">Total Taxable Income</p>
+              <p className="text-brand-400 font-mono text-sm font-semibold">{fmtS(preview.totalForgiven)}</p>
+            </div>
           </div>
         </div>
       )}
@@ -321,7 +366,7 @@ function SigningBonusForm({ form, set }) {
 function StartingBonusForm({ form, set }) {
   const principal = parseFloat(form.principal_amount)
   const periods   = parseInt(form.forgiveness_periods)
-  const amort     = calcAmort(principal, 0, periods, form.forgiveness_frequency)
+  const forgivenPerPeriod = principal && periods ? principal / periods : null
 
   return (
     <>
@@ -338,12 +383,12 @@ function StartingBonusForm({ form, set }) {
           onChange={v => set('forgiveness_periods', v)} type="number" placeholder="12" hint="e.g. 12 months" />
       </div>
 
-      {amort && principal && periods && (
+      {forgivenPerPeriod && principal > 0 && periods > 0 && (
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Repayment Preview</p>
           <div>
-            <p className="text-slate-500 text-xs">Amount forgiven per period</p>
-            <p className="text-white font-mono font-semibold">{fmt(amort.forgivePerPeriod)}</p>
+            <p className="text-slate-500 text-xs">Forgiven principal per period</p>
+            <p className="text-white font-mono font-semibold">{fmt(forgivenPerPeriod)}</p>
           </div>
         </div>
       )}
