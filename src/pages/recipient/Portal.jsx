@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { estimateBalanceAtDate } from '../../lib/amortization'
+import RecipientOnboarding from './Onboarding'
 
 // ── Helpers ────────────────────────────────────────────────
 const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -382,6 +383,7 @@ export default function RecipientPortal() {
   const [agreements, setAgreements] = useState([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => { if (session?.user?.id) load() }, [session])
 
@@ -393,6 +395,13 @@ export default function RecipientPortal() {
         .from('recipients').select('*').eq('user_id', session.user.id).single()
       if (recErr) throw new Error('Could not find your recipient profile. Please contact your administrator.')
       setRecipient(rec)
+
+      // If onboarding not complete, show onboarding screen
+      if (!rec.onboarding_complete) {
+        setShowOnboarding(true)
+        setLoading(false)
+        return
+      }
 
       // Log last login — only set first_login_at if not already set
       const loginUpdates = { last_login_at: new Date().toISOString() }
@@ -411,6 +420,11 @@ export default function RecipientPortal() {
     }
   }
 
+  function handleOnboardingComplete() {
+    setShowOnboarding(false)
+    load()
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
       <div className="w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
@@ -425,6 +439,8 @@ export default function RecipientPortal() {
       </div>
     </div>
   )
+
+  if (showOnboarding) return <RecipientOnboarding onComplete={handleOnboardingComplete} />
 
   const firstName   = recipient?.first_name ?? 'there'
   const activeCount = agreements.filter(a => a.status === 'active').length

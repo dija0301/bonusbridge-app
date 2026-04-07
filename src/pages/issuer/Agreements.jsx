@@ -1100,6 +1100,27 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </div>
           </Section>
 
+          {/* Recipient acknowledgment */}
+          <Section title="Recipient Acknowledgment">
+            {a.acknowledged_at ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2 8 6 12 14 4"/></svg>
+                  <p className="text-emerald-400 text-xs font-semibold">Acknowledged</p>
+                </div>
+                <p className="text-slate-300 text-sm">
+                  {new Date(a.acknowledged_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {' at '}
+                  {new Date(a.acknowledged_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
+                <p className="text-slate-500 text-sm italic">Not yet acknowledged by recipient</p>
+              </div>
+            )}
+          </Section>
+
           {/* Eligibility */}
           {(elig.benefits_eligible || elig.maintain_role || elig.licensure_required || elig.min_fte || elig.notes) && (
             <Section title="Eligibility Criteria">
