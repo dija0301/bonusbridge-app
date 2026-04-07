@@ -30,29 +30,32 @@ const FORGIVENESS_FREQUENCIES = [
 ]
 
 const AGREEMENT_STATUSES = [
-  { value: 'draft',      label: 'Draft'      },
-  { value: 'active',     label: 'Active'     },
-  { value: 'forgiven',   label: 'Forgiven'   },
-  { value: 'terminated', label: 'Terminated' },
-  { value: 'collected',  label: 'Collected'  },
-  { value: 'cancelled',  label: 'Cancelled'  },
+  { value: 'draft',       label: 'Draft'       },
+  { value: 'onboarding',  label: 'Onboarding'  },
+  { value: 'active',      label: 'Active'      },
+  { value: 'forgiven',    label: 'Forgiven'    },
+  { value: 'terminated',  label: 'Terminated'  },
+  { value: 'collected',   label: 'Collected'   },
+  { value: 'cancelled',   label: 'Cancelled'   },
 ]
 
 const STATUS_STYLES = {
-  draft:      'bg-slate-500/10 text-slate-400 border-slate-500/20',
-  active:     'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  forgiven:   'bg-brand-500/10 text-brand-400 border-brand-500/20',
-  terminated: 'bg-red-500/10 text-red-400 border-red-500/20',
-  collected:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  cancelled:  'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  draft:       'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  onboarding:  'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  active:      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  forgiven:    'bg-brand-500/10 text-brand-400 border-brand-500/20',
+  terminated:  'bg-red-500/10 text-red-400 border-red-500/20',
+  collected:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  cancelled:   'bg-slate-500/10 text-slate-400 border-slate-500/20',
 }
 
 const FILTER_OPTIONS = [
-  { value: 'active',     label: 'Active'     },
-  { value: 'all',        label: 'All'        },
-  { value: 'draft',      label: 'Draft'      },
-  { value: 'forgiven',   label: 'Forgiven'   },
-  { value: 'terminated', label: 'Terminated' },
+  { value: 'active',      label: 'Active'      },
+  { value: 'all',         label: 'All'         },
+  { value: 'draft',       label: 'Draft'       },
+  { value: 'onboarding',  label: 'Onboarding'  },
+  { value: 'forgiven',    label: 'Forgiven'    },
+  { value: 'terminated',  label: 'Terminated'  },
 ]
 
 const fmt     = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -67,6 +70,28 @@ function XIcon({ className }) {
 }
 function FileIcon({ className }) {
   return <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6L9 2z"/><path d="M9 2v4h4"/></svg>
+}
+function DownloadIcon({ className }) {
+  return <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2v8m0 0l-3-3m3 3l3-3"/><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/></svg>
+}
+
+function exportCSV(rows, filename) {
+  if (!rows.length) return
+  const headers = Object.keys(rows[0])
+  const csv = [
+    headers.join(','),
+    ...rows.map(row => headers.map(h => {
+      const val = row[h] ?? ''
+      return typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+    }).join(','))
+  ].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // ── Form helpers ───────────────────────────────────────────
@@ -614,9 +639,12 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
 
     // Fire amortization schedule generation for signing and starting bonuses
     if (savedId && ['signing_bonus', 'starting_bonus'].includes(form.bonus_type)) {
-      supabase.functions.invoke('generate-amortization', {
-        body: { agreement_id: savedId }
-      }).catch(e => console.warn('Amortization generation failed:', e))
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.functions.invoke('generate-amortization', {
+          body: { agreement_id: savedId },
+          headers: { Authorization: `Bearer ${session?.access_token}` }
+        }).catch(e => console.warn('Amortization generation failed:', e))
+      })
     }
 
     onSaved()
@@ -774,6 +802,24 @@ export default function Agreements() {
   function closeDrawer() { setDrawerOpen(false); setEditing(null) }
   function onSaved()     { closeDrawer(); load() }
 
+  function exportAgreements() {
+    const rows = filtered.map(a => ({
+      'Recipient':         a.recipients ? `${a.recipients.first_name} ${a.recipients.last_name}` : '',
+      'Agreement Number':  a.agreement_number ?? '',
+      'Bonus Type':        BONUS_TYPES.find(b => b.value === a.bonus_type)?.label ?? a.bonus_type,
+      'Status':            a.status,
+      'Principal':         a.principal_amount,
+      'Outstanding Balance': a.outstanding_balance,
+      'Interest Rate':     a.interest_rate ?? '',
+      'Forgiveness Periods': a.forgiveness_periods ?? '',
+      'Forgiveness Frequency': a.forgiveness_frequency ?? '',
+      'Effective Date':    a.effective_date ?? '',
+      'Forgiveness Start': a.forgiveness_start_date ?? '',
+      'Projected End':     a.projected_end_date ?? '',
+    }))
+    exportCSV(rows, `agreements-${filter}-${new Date().toISOString().split('T')[0]}.csv`)
+  }
+
   const counts = AGREEMENT_STATUSES.reduce((acc, s) => {
     acc[s.value] = agreements.filter(a => a.status === s.value).length
     return acc
@@ -799,10 +845,18 @@ export default function Agreements() {
             {counts.active} active · {counts.all} total
           </p>
         </div>
-        <button onClick={openAdd}
-          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition w-full sm:w-auto justify-center">
-          <PlusIcon className="w-4 h-4" /> New Agreement
-        </button>
+        <div className="flex items-center gap-3">
+          {filtered.length > 0 && (
+            <button onClick={exportAgreements}
+              className="flex items-center gap-2 border border-slate-700 text-slate-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
+              <DownloadIcon className="w-4 h-4" /> Export
+            </button>
+          )}
+          <button onClick={openAdd}
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition w-full sm:w-auto justify-center">
+            <PlusIcon className="w-4 h-4" /> New Agreement
+          </button>
+        </div>
       </div>
 
       {error && (

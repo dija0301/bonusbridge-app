@@ -394,8 +394,10 @@ export default function RecipientPortal() {
       if (recErr) throw new Error('Could not find your recipient profile. Please contact your administrator.')
       setRecipient(rec)
 
-      // Log last login
-      await supabase.from('recipients').update({ last_login_at: new Date().toISOString() }).eq('id', rec.id)
+      // Log last login — only set first_login_at if not already set
+      const loginUpdates = { last_login_at: new Date().toISOString() }
+      if (!rec.first_login_at) loginUpdates.first_login_at = new Date().toISOString()
+      await supabase.from('recipients').update(loginUpdates).eq('id', rec.id)
       await supabase.from('recipient_events').insert({ recipient_id: rec.id, issuer_id: rec.issuer_id, event_type: 'login' })
 
       const { data: ags, error: agErr } = await supabase

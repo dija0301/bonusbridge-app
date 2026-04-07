@@ -15,6 +15,36 @@ function UserIcon({ className }) {
 function XIcon({ className }) {
   return <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
 }
+function DownloadIcon({ className }) {
+  return <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2v8m0 0l-3-3m3 3l3-3"/><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/></svg>
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null
+  const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'Today'
+  if (days === 1) return '1 day ago'
+  return `${days} days ago`
+}
+
+function exportCSV(rows, filename) {
+  if (!rows.length) return
+  const headers = Object.keys(rows[0])
+  const csv = [
+    headers.join(','),
+    ...rows.map(row => headers.map(h => {
+      const val = row[h] ?? ''
+      return typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+    }).join(','))
+  ].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 // ── Status config ──────────────────────────────────────────
 const INVITE_STATUS = {
@@ -389,11 +419,21 @@ function RecipientDetailPanel({ recipient: r, onClose, onEdit, onInvite }) {
 
           <Section title="Portal Activity">
             <div>
+              <p className="text-slate-500 text-xs mb-0.5">First Login</p>
+              {r.first_login_at
+                ? <div>
+                    <p className="text-slate-200 text-sm">{fmtDt(r.first_login_at)}</p>
+                    <p className="text-slate-500 text-xs">{daysSince(r.first_login_at)}</p>
+                  </div>
+                : <p className="text-slate-600 text-sm italic">Never logged in</p>
+              }
+            </div>
+            <div>
               <p className="text-slate-500 text-xs mb-0.5">Last Login</p>
               {r.last_login_at
                 ? <div>
                     <p className="text-slate-200 text-sm">{fmtDt(r.last_login_at)}</p>
-                    <p className="text-slate-500 text-xs">{fmtTm(r.last_login_at)}</p>
+                    <p className="text-slate-500 text-xs">{daysSince(r.last_login_at)}</p>
                   </div>
                 : <p className="text-slate-600 text-sm italic">Never logged in</p>
               }
@@ -414,10 +454,11 @@ function RecipientDetailPanel({ recipient: r, onClose, onEdit, onInvite }) {
 
         {/* Footer actions */}
         <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex gap-3">
-          {iStatus === 'none' && r.is_active && (
+          {r.is_active && (
             <button onClick={() => onInvite(r)}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition">
-              <MailIcon className="w-4 h-4" /> Send Invite
+              <MailIcon className="w-4 h-4" />
+              {iStatus === 'none' ? 'Send Invite' : 'Resend Invite'}
             </button>
           )}
           <button onClick={() => onEdit(r)}
@@ -472,10 +513,34 @@ export default function Recipients() {
   function closeDrawer() { setDrawerOpen(false); setEditing(null) }
   function onSaved()     { closeDrawer(); load() }
 
+  function exportRecipients() {
+    const rows = filtered.map(r => ({
+      'First Name':       r.first_name,
+      'Last Name':        r.last_name,
+      'Employee ID':      r.employee_id ?? '',
+      'Title':            r.title ?? '',
+      'Department':       r.department ?? '',
+      'Work Email':       r.email,
+      'Personal Email':   r.personal_email ?? '',
+      'Mobile Phone':     r.mobile_phone ?? '',
+      'Work Phone':       r.work_phone ?? '',
+      'Address':          [r.address_line1, r.city, r.state, r.zip].filter(Boolean).join(', '),
+      'Status':           r.is_active ? 'Active' : 'Inactive',
+      'Portal Status':    inviteStatus(r),
+      'Agreements':       r.agreements?.length ?? 0,
+      'First Login':      r.first_login_at ? new Date(r.first_login_at).toLocaleDateString() : '',
+      'Last Login':       r.last_login_at  ? new Date(r.last_login_at).toLocaleDateString()  : '',
+      'Days Since Login': r.last_login_at  ? Math.floor((new Date() - new Date(r.last_login_at)) / (1000 * 60 * 60 * 24)) : '',
+    }))
+    exportCSV(rows, `recipients-${filter}-${new Date().toISOString().split('T')[0]}.csv`)
+  }
+
   async function sendInvite(r) {
     setInviting(r.id)
+    const { data: { session } } = await supabase.auth.getSession()
     const { data, error } = await supabase.functions.invoke('invite-recipient', {
-      body: { recipient_id: r.id }
+      body: { recipient_id: r.id },
+      headers: { Authorization: `Bearer ${session?.access_token}` }
     })
     console.log('Invite result:', { data, error })
     if (error) {
@@ -520,9 +585,17 @@ export default function Recipients() {
             {activeCount} active · {inactiveCount} inactive
           </p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition w-full sm:w-auto justify-center">
-          <PlusIcon className="w-4 h-4" /> Add Recipient
-        </button>
+        <div className="flex items-center gap-3">
+          {filtered.length > 0 && (
+            <button onClick={exportRecipients}
+              className="flex items-center gap-2 border border-slate-700 text-slate-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
+              <DownloadIcon className="w-4 h-4" /> Export
+            </button>
+          )}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition w-full sm:w-auto justify-center">
+            <PlusIcon className="w-4 h-4" /> Add Recipient
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -603,7 +676,7 @@ export default function Recipients() {
                         {r.last_login_at
                           ? <div>
                               <p className="text-slate-300 text-xs">{new Date(r.last_login_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                              <p className="text-slate-500 text-xs">{new Date(r.last_login_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                              <p className="text-slate-500 text-xs">{daysSince(r.last_login_at)}</p>
                             </div>
                           : <span className="text-slate-600 text-xs italic">Never</span>
                         }
@@ -613,14 +686,14 @@ export default function Recipients() {
                       </td>
                       <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2 flex-wrap">
-                          {iStatus === 'none' && r.is_active && (
+                          {r.is_active && (
                             <button
                               onClick={() => sendInvite(r)}
                               disabled={inviting === r.id}
                               className="flex items-center gap-1 text-xs font-medium text-brand-400 hover:text-brand-300 disabled:opacity-50 transition"
                             >
                               <MailIcon className="w-3.5 h-3.5" />
-                              {inviting === r.id ? 'Sending…' : 'Invite'}
+                              {inviting === r.id ? 'Sending…' : iStatus === 'none' ? 'Invite' : 'Resend Invite'}
                             </button>
                           )}
                           <button
