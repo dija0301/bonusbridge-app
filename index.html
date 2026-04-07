@@ -1,16 +1,1899 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BonusBridge</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BonusBridge — Bonus Administration, Simplified</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Instrument+Serif:ital,wght@0,400;1,400&display=swap');
+
+:root {
+  --indigo:      #4f46e5;
+  --indigo-dark: #3730a3;
+  --indigo-mid:  #6366f1;
+  --indigo-light:#818cf8;
+  --violet:      #7c3aed;
+  --navy:        #1e1b4b;
+  --navy-mid:    #312e81;
+  --cream:       #f7f6f2;
+  --white:       #ffffff;
+  --g200:        #eae8e2;
+  --g300:        #d1cec6;
+  --g400:        #9ca3af;
+  --g500:        #6b7280;
+  --g700:        #374151;
+  --g900:        #111827;
+  --green:       #059669;
+  --amber:       #d97706;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--white);color:var(--g900);line-height:1.6;-webkit-font-smoothing:antialiased;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(30px,-20px) scale(1.05);}66%{transform:translate(-20px,15px) scale(.97);}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes overlayIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px);}to{opacity:1;transform:translateX(0);}}
+
+.fade-up{opacity:0;animation:fadeUp .7s ease forwards;}
+.d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}.d4{animation-delay:.38s}.d5{animation-delay:.5s}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--cream);}
+::-webkit-scrollbar-thumb{background:var(--g300);border-radius:99px;}
+
+/* ──────────────────────────────────────
+   NAV
+────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--g200);padding:0 40px;
+}
+.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.nav-wordmark{font-size:18px;font-weight:800;letter-spacing:-.03em;color:var(--g900);}
+.nav-wordmark span{color:var(--indigo);}
+.nav-links{display:flex;align-items:center;gap:6px;}
+.nav-links a{font-size:13.5px;font-weight:500;color:var(--g500);text-decoration:none;padding:6px 12px;border-radius:8px;transition:all .15s;}
+.nav-links a:hover{color:var(--g900);background:var(--cream);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.btn-ghost-sm{font-size:13.5px;font-weight:600;color:var(--indigo);background:transparent;border:none;padding:8px 16px;border-radius:9px;cursor:pointer;font-family:inherit;transition:background .15s;}
+.btn-ghost-sm:hover{background:#eef2ff;}
+.btn-primary-sm{font-size:13.5px;font-weight:700;color:var(--white);background:var(--indigo);border:none;padding:9px 22px;border-radius:9px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-primary-sm:hover{background:var(--indigo-dark);box-shadow:0 4px 14px #4f46e540;}
+
+/* ── LOGIN MODAL ── */
+.login-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:overlayIn .2s ease;}
+.login-overlay.hidden{display:none;}
+.login-modal{background:var(--white);border-radius:20px;padding:40px 36px 36px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.18);animation:modalIn .25s ease;position:relative;}
+.login-modal-title{font-size:22px;font-weight:800;color:var(--g900);margin-bottom:6px;letter-spacing:-.02em;}
+.login-modal-sub{font-size:14px;color:var(--g500);margin-bottom:28px;line-height:1.5;}
+.login-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.login-choice{border:1.5px solid var(--g200);border-radius:14px;padding:20px 16px;cursor:pointer;background:var(--white);font-family:inherit;text-align:left;transition:all .18s;text-decoration:none;display:block;}
+.login-choice:hover{border-color:var(--indigo);background:#f5f3ff;transform:translateY(-2px);box-shadow:0 6px 20px rgba(79,70,229,.1);}
+.login-choice.disabled{opacity:.45;cursor:default;pointer-events:none;}
+.login-choice-icon{width:36px;height:36px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;}
+.login-choice-icon-issuer{background:#eef2ff;}
+.login-choice-icon-recipient{background:#ecfdf5;}
+.login-choice-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+.login-choice-label-issuer{color:var(--indigo);}
+.login-choice-label-recipient{color:var(--green);}
+.login-choice-title{font-size:15px;font-weight:700;color:var(--g900);margin-bottom:4px;}
+.login-choice-desc{font-size:12px;color:var(--g500);line-height:1.45;}
+.login-modal-x{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--g400);padding:6px;border-radius:8px;transition:background .15s;line-height:1;}
+.login-modal-x:hover{background:var(--cream);color:var(--g700);}
+
+
+/* ──────────────────────────────────────
+   HERO
+────────────────────────────────────── */
+.hero{
+  min-height:100vh;display:flex;align-items:center;
+  background:var(--navy);
+  padding:120px 40px 80px;position:relative;overflow:hidden;
+}
+/* Subtle mesh gradient orbs */
+.hero-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(80px);}
+.hero-orb-1{width:600px;height:600px;background:#4f46e520;top:-100px;right:-100px;animation:drift 18s ease infinite;}
+.hero-orb-2{width:400px;height:400px;background:#7c3aed18;bottom:-50px;left:10%;animation:drift 24s ease infinite reverse;}
+.hero-orb-3{width:300px;height:300px;background:#312e8130;top:40%;right:30%;animation:drift 20s ease infinite 3s;}
+
+.hero-inner{max-width:1180px;margin:0 auto;position:relative;z-index:1;display:grid;grid-template-columns:1fr 480px;gap:80px;align-items:center;}
+
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(255,255,255,.14);border-radius:99px;
+  padding:5px 14px 5px 8px;margin-bottom:28px;
+}
+.hero-tag-dot{width:8px;height:8px;border-radius:50%;background:var(--indigo-light);animation:pulse 2s ease infinite;}
+.hero-tag-text{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#a5b4fc;}
+
+.hero h1{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(44px,5.5vw,72px);line-height:1.06;
+  color:var(--white);margin-bottom:22px;
+}
+.hero h1 em{font-style:italic;color:#a5b4fc;}
+.hero-sub{font-size:17px;color:rgba(165,180,252,.75);line-height:1.78;max-width:480px;margin-bottom:40px;}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-white{background:var(--white);color:var(--indigo);padding:13px 28px;border-radius:11px;font-size:15px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:-.01em;}
+.btn-white:hover{box-shadow:0 8px 28px rgba(0,0,0,.22);transform:translateY(-1px);}
+.btn-outline-white{background:transparent;color:var(--white);border:1.5px solid rgba(255,255,255,.28);padding:13px 28px;border-radius:11px;font-size:15px;font-weight:600;text-decoration:none;transition:all .2s;display:inline-block;}
+.btn-outline-white:hover{border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.08);}
+
+/* Hero right — dashboard mockup */
+.hero-mockup{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;padding:0;overflow:hidden;
+}
+.mockup-header{
+  background:rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.1);
+  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+}
+.mockup-dots{display:flex;gap:6px;}
+.mockup-dot{width:10px;height:10px;border-radius:50%;}
+.mockup-title-bar{font-size:12px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.04em;}
+.mockup-body{padding:22px 20px;}
+.mockup-agreement-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:12px;}
+.mockup-name{font-size:19px;font-weight:800;color:var(--white);margin-bottom:2px;}
+.mockup-org{font-size:12px;color:#a5b4fc;margin-bottom:20px;}
+.mockup-progress-label{display:flex;justify-content:space-between;font-size:12px;color:#a5b4fc;margin-bottom:7px;font-weight:500;}
+.mockup-track{height:6px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-bottom:20px;}
+.mockup-fill{height:100%;width:68%;background:linear-gradient(90deg,#818cf8,#c7d2fe);border-radius:99px;}
+.mockup-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.mockup-stat{background:rgba(255,255,255,.07);border-radius:11px;padding:12px 14px;}
+.mockup-stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6366f1;margin-bottom:4px;}
+.mockup-stat-val{font-size:17px;font-weight:800;color:var(--white);}
+.mockup-stat-val.green{color:#6ee7b7;}
+.mockup-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12px;}
+.mockup-row-label{color:#a5b4fc;font-weight:500;}
+.mockup-row-val{color:var(--white);font-weight:700;}
+.mockup-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;background:#d1fae522;color:#6ee7b7;border:1px solid #6ee7b730;}
+
+/* ──────────────────────────────────────
+   PROBLEM — editorial dark layout
+────────────────────────────────────── */
+.problem-section{background:var(--g900);padding:100px 40px;}
+.problem-inner{max-width:1180px;margin:0 auto;}
+.problem-header{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:end;margin-bottom:64px;}
+.prob-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo-light);margin-bottom:14px;}
+.prob-title{font-family:'Instrument Serif',serif;font-size:clamp(34px,4vw,54px);line-height:1.08;color:var(--white);}
+.prob-title em{font-style:italic;color:var(--indigo-light);}
+.prob-body{font-size:16px;color:rgba(255,255,255,.45);line-height:1.78;align-self:end;}
+.pain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.08);border-radius:16px;overflow:hidden;}
+.pain-item{background:var(--g900);padding:32px 28px;transition:background .2s;}
+.pain-item:hover{background:#1a1a2e;}
+.pain-num{font-family:'Instrument Serif',serif;font-size:48px;font-weight:400;color:rgba(255,255,255,.08);line-height:1;margin-bottom:16px;}
+.pain-item h4{font-size:15px;font-weight:700;color:var(--white);margin-bottom:10px;}
+.pain-item p{font-size:13px;color:rgba(255,255,255,.4);line-height:1.65;}
+
+/* ──────────────────────────────────────
+   SECTION UTILITY
+────────────────────────────────────── */
+.section-wrap{padding:100px 40px;}
+.section-inner{max-width:1180px;margin:0 auto;}
+.s-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo);margin-bottom:12px;}
+.s-title{font-family:'Instrument Serif',serif;font-size:clamp(30px,4vw,50px);line-height:1.1;color:var(--g900);margin-bottom:14px;}
+.s-title em{font-style:italic;color:var(--indigo);}
+.s-sub{font-size:16px;color:var(--g500);max-width:560px;line-height:1.78;margin-bottom:52px;}
+
+/* ──────────────────────────────────────
+   BONUS TYPES — dark with icon badges
+────────────────────────────────────── */
+.bonus-section{background:var(--navy);padding:100px 40px;}
+.bonus-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:rgba(255,255,255,.06);border-radius:20px;overflow:hidden;}
+.bonus-card{background:var(--navy);padding:36px;transition:background .2s;position:relative;}
+.bonus-card:hover{background:#221f52;}
+.bonus-card::after{content:'';position:absolute;inset:0;border-radius:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);pointer-events:none;}
+.bonus-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;flex-shrink:0;}
+.bonus-card h4{font-size:16px;font-weight:700;color:var(--white);margin-bottom:10px;}
+.bonus-card p{font-size:13.5px;color:rgba(255,255,255,.45);line-height:1.7;}
+.bonus-pill{display:inline-block;margin-top:16px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;}
+.pill-complex{background:#7c3aed1a;color:#c4b5fd;border:1px solid #7c3aed33;}
+.pill-mid    {background:#4f46e51a;color:#818cf8;border:1px solid #4f46e533;}
+.pill-simple {background:#05966918;color:#6ee7b7;border:1px solid #05966930;}
+
+/* ──────────────────────────────────────
+   HOW IT WORKS — numbered horizontal
+────────────────────────────────────── */
+.how-section{background:var(--cream);padding:100px 40px;}
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;}
+.how-grid::before{content:'';position:absolute;top:22px;left:calc(12.5% + 18px);right:calc(12.5% + 18px);height:1px;background:linear-gradient(90deg,var(--indigo),var(--violet));z-index:0;}
+.how-step{position:relative;z-index:1;padding:0 20px;text-align:center;}
+.how-num{width:44px;height:44px;border-radius:50%;background:var(--indigo);color:var(--white);font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 0 0 6px var(--cream),0 4px 16px #4f46e540;}
+.how-step h4{font-size:14px;font-weight:700;color:var(--g900);margin-bottom:8px;}
+.how-step p{font-size:13px;color:var(--g500);line-height:1.65;}
+
+/* ──────────────────────────────────────
+   PACKAGES
+────────────────────────────────────── */
+.packages-section{background:var(--white);padding:100px 40px;}
+.pkg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+.pkg{border-radius:20px;padding:30px 26px;border:1.5px solid var(--g200);position:relative;transition:all .2s;display:flex;flex-direction:column;}
+.pkg:hover{border-color:var(--indigo);box-shadow:0 16px 48px #4f46e514;transform:translateY(-3px);}
+.pkg.feat{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-mid) 100%);border-color:transparent;}
+.pkg.feat:hover{box-shadow:0 20px 56px #1e1b4b44;transform:translateY(-3px);}
+.pkg-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--indigo);color:var(--white);padding:4px 16px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.07em;white-space:nowrap;}
+.pkg-tier{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--indigo);margin-bottom:4px;}
+.feat .pkg-tier{color:#a5b4fc;}
+.pkg-name{font-family:'Instrument Serif',serif;font-size:24px;color:var(--g900);margin-bottom:6px;}
+.feat .pkg-name{color:var(--white);}
+.pkg-desc{font-size:13px;color:var(--g500);line-height:1.55;margin-bottom:0;}
+.feat .pkg-desc{color:#a5b4fc;}
+.pkg-div{height:1px;background:var(--g200);margin:18px 0;}
+.feat .pkg-div{background:rgba(255,255,255,.12);}
+.pkg-list{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1;}
+.pkg-list li{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--g700);line-height:1.4;}
+.feat .pkg-list li{color:#e0e7ff;}
+.pkg-check{flex-shrink:0;margin-top:1px;}
+.pkg-btn{margin-top:22px;display:block;text-align:center;padding:11px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;border:none;width:100%;}
+.pb-outline{border:1.5px solid var(--g200)!important;color:var(--indigo);background:transparent;}
+.pb-outline:hover{border-color:var(--indigo)!important;background:var(--cream);}
+.pb-solid{background:var(--indigo);color:var(--white);}
+.pb-solid:hover{background:var(--indigo-dark);}
+.pb-white{background:var(--white);color:var(--navy);}
+.pb-white:hover{box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.pkg-note{font-size:11px;color:var(--g400);text-align:center;margin-top:9px;}
+
+/* ──────────────────────────────────────
+   SERVICES — dark alternating
+────────────────────────────────────── */
+.services-section{background:var(--g900);padding:100px 40px;}
+.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.07);border-radius:20px;overflow:hidden;}
+.svc-card{background:var(--g900);padding:32px;transition:background .2s;}
+.svc-card:hover{background:#111824;}
+.svc-icon-wrap{width:40px;height:40px;border-radius:10px;background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.25);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.svc-card h4{font-size:15px;font-weight:700;color:var(--white);margin-bottom:8px;}
+.svc-card p{font-size:13px;color:rgba(255,255,255,.4);line-height:1.65;}
+.svc-tag{display:inline-block;margin-top:14px;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(79,70,229,.2);color:#818cf8;border:1px solid rgba(79,70,229,.3);}
+
+/* ──────────────────────────────────────
+   RECIPIENT — split layout
+────────────────────────────────────── */
+.recipient-section{background:var(--cream);padding:100px 40px;}
+.recipient-inner{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+.recipient-list{list-style:none;display:flex;flex-direction:column;gap:16px;margin-top:28px;}
+.recipient-list li{display:flex;align-items:flex-start;gap:14px;font-size:15px;color:var(--g700);}
+.recipient-list-icon{width:28px;height:28px;border-radius:8px;background:#eef2ff;border:1px solid #c7d2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.r-visual{background:linear-gradient(145deg,var(--navy),var(--navy-mid));border-radius:22px;padding:32px;overflow:hidden;position:relative;}
+.r-visual::before{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;background:rgba(255,255,255,.04);border-radius:50%;}
+.r-portal-chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:14px;}
+.r-user-name{font-size:20px;font-weight:800;color:var(--white);margin-bottom:2px;}
+.r-org{font-size:12px;color:#a5b4fc;margin-bottom:20px;}
+.r-progress-lbl{display:flex;justify-content:space-between;font-size:11.5px;color:#a5b4fc;font-weight:600;margin-bottom:7px;}
+.r-track{height:7px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-bottom:20px;}
+.r-fill{height:100%;width:68%;background:linear-gradient(90deg,#818cf8,#e0e7ff);border-radius:99px;}
+.r-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.r-stat{background:rgba(255,255,255,.07);border-radius:12px;padding:14px;}
+.r-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#6366f1;margin-bottom:4px;}
+.r-stat-val{font-size:17px;font-weight:800;color:var(--white);}
+.r-stat-val.green{color:#86efac;}
+
+/* ──────────────────────────────────────
+   FEATURES — magazine asymmetric
+────────────────────────────────────── */
+.features-section{background:var(--white);padding:100px 40px;}
+.features-header{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:end;margin-bottom:56px;}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g200);border-radius:16px;overflow:hidden;}
+.feat-card{background:var(--white);padding:32px;transition:background .2s;}
+.feat-card:hover{background:var(--cream);}
+.feat-icon{width:42px;height:42px;border-radius:10px;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.feat-card h4{font-size:15px;font-weight:700;color:var(--g900);margin-bottom:8px;}
+.feat-card p{font-size:13px;color:var(--g500);line-height:1.65;}
+
+/* ──────────────────────────────────────
+   TRUST — editorial quotes
+────────────────────────────────────── */
+.trust-section{background:var(--g900);padding:100px 40px;}
+.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:rgba(255,255,255,.07);border-radius:20px;overflow:hidden;margin-top:56px;}
+.trust-card{background:var(--g900);padding:36px;transition:background .2s;}
+.trust-card:hover{background:#111824;}
+.trust-quote-mark{font-family:'Instrument Serif',serif;font-size:64px;line-height:.8;color:var(--indigo);margin-bottom:10px;display:block;}
+.trust-quote{font-size:15px;color:rgba(255,255,255,.65);line-height:1.75;margin-bottom:24px;font-style:italic;}
+.trust-author{display:flex;align-items:center;gap:12px;}
+.trust-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--white);flex-shrink:0;}
+.trust-name{font-size:13px;font-weight:700;color:var(--white);}
+.trust-role{font-size:11px;color:rgba(255,255,255,.35);}
+
+/* ──────────────────────────────────────
+   CTA
+────────────────────────────────────── */
+.cta-section{background:var(--navy);padding:120px 40px;text-align:center;position:relative;overflow:hidden;}
+.cta-orb-1{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(#4f46e520,transparent 70%);top:-100px;right:-100px;pointer-events:none;}
+.cta-orb-2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(#7c3aed18,transparent 70%);bottom:-80px;left:-80px;pointer-events:none;}
+.cta-inner{position:relative;z-index:1;max-width:720px;margin:0 auto;}
+.cta-title{font-family:'Instrument Serif',serif;font-size:clamp(36px,5vw,62px);color:var(--white);line-height:1.08;margin-bottom:18px;}
+.cta-title em{font-style:italic;color:#a5b4fc;}
+.cta-sub{font-size:17px;color:rgba(165,180,252,.7);margin-bottom:44px;line-height:1.7;}
+.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+/* ──────────────────────────────────────
+   FOOTER
+────────────────────────────────────── */
+footer{background:var(--g900);padding:52px 40px;border-top:1px solid rgba(255,255,255,.07);}
+.footer-inner{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr auto auto;align-items:start;gap:40px;}
+.footer-brand{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.footer-wordmark{font-size:16px;font-weight:800;color:var(--white);letter-spacing:-.02em;}
+.footer-wordmark span{color:var(--indigo-light);}
+.footer-tagline{font-size:13px;color:rgba(255,255,255,.3);max-width:260px;line-height:1.6;}
+.footer-col h5{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.35);margin-bottom:14px;}
+.footer-col a{display:block;font-size:13px;color:rgba(255,255,255,.45);text-decoration:none;margin-bottom:9px;transition:color .15s;}
+.footer-col a:hover{color:rgba(255,255,255,.8);}
+.footer-bottom{max-width:1180px;margin:32px auto 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.06);font-size:12px;color:rgba(255,255,255,.25);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+/* ──────────────────────────────────────
+   MODAL
+────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(10,8,30,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;animation:overlayIn .2s ease;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--white);border-radius:24px;width:100%;max-width:520px;padding:40px;position:relative;animation:modalIn .25s cubic-bezier(.4,0,.2,1);max-height:92vh;overflow-y:auto;}
+.modal-x{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:8px;border:none;background:var(--cream);color:var(--g500);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.modal-x:hover{background:var(--g200);color:var(--g900);}
+.modal-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--indigo);margin-bottom:6px;}
+.modal-title{font-family:'Instrument Serif',serif;font-size:27px;color:var(--g900);margin-bottom:6px;line-height:1.2;}
+.modal-sub{font-size:13.5px;color:var(--g500);margin-bottom:24px;line-height:1.55;}
+.modal-div{height:1px;background:var(--g200);margin:20px 0;}
+.pkg-sel-label{font-size:13px;font-weight:600;color:var(--g700);margin-bottom:10px;}
+.pkg-sel-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;}
+.pkg-sel-opt{padding:10px 12px;border-radius:10px;border:1.5px solid var(--g200);background:var(--cream);cursor:pointer;text-align:left;transition:all .15s;font-family:inherit;}
+.pkg-sel-opt:hover{border-color:var(--indigo);}
+.pkg-sel-opt.on{border-color:var(--indigo);background:#eef2ff;}
+.pso-tier{font-size:11px;font-weight:700;color:var(--g400);margin-bottom:1px;}
+.pkg-sel-opt.on .pso-tier{color:var(--indigo);}
+.pso-name{font-size:13px;font-weight:700;color:var(--g700);}
+.pkg-sel-opt.on .pso-name{color:var(--indigo-dark);}
+.pkg-sel-wide{grid-column:1/-1;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.form-field label{font-size:12.5px;font-weight:600;color:var(--g700);}
+.form-field input,.form-field select,.form-field textarea{padding:10px 13px;border:1.5px solid var(--g200);border-radius:9px;font-size:14px;color:var(--g900);outline:none;font-family:inherit;background:var(--cream);transition:all .15s;}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--indigo);background:var(--white);box-shadow:0 0 0 3px #4f46e51a;}
+.form-field textarea{resize:vertical;min-height:76px;}
+.form-submit{width:100%;padding:14px;border-radius:11px;border:none;background:var(--indigo);color:var(--white);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:6px;}
+.form-submit:hover{background:var(--indigo-dark);box-shadow:0 4px 16px #4f46e540;}
+.form-fine{font-size:11.5px;color:var(--g400);text-align:center;margin-top:10px;line-height:1.5;}
+.modal-success{text-align:center;padding:16px 0;}
+.success-mark{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+.success-title{font-family:'Instrument Serif',serif;font-size:28px;color:var(--g900);margin-bottom:10px;}
+.success-body{font-size:14.5px;color:var(--g500);line-height:1.7;}
+
+/* ──────────────────────────────────────
+   HAMBURGER
+────────────────────────────────────── */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: 1.5px solid var(--g200);
+  border-radius: 9px;
+  cursor: pointer;
+  padding: 8px;
+  transition: all .15s;
+}
+.hamburger:hover { background: var(--cream); border-color: var(--g300); }
+.hamburger span {
+  display: block;
+  height: 1.5px;
+  background: var(--g700);
+  border-radius: 2px;
+  transition: all .25s ease;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* ──────────────────────────────────────
+   MOBILE MENU
+────────────────────────────────────── */
+.mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  background: rgba(15,12,40,.55);
+  backdrop-filter: blur(4px);
+  animation: overlayIn .2s ease;
+}
+.mobile-menu.hidden { display: none; }
+.mobile-menu-inner {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(340px, 88vw);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight .25s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+.mobile-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--g200);
+}
+.mobile-close {
+  width: 36px; height: 36px;
+  border-radius: 8px; border: 1.5px solid var(--g200);
+  background: var(--cream); color: var(--g500);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s;
+}
+.mobile-close:hover { background: var(--g200); color: var(--g900); }
+.mobile-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  flex: 1;
+}
+.mobile-nav a {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--g700);
+  text-decoration: none;
+  padding: 13px 24px;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mobile-nav a:hover { background: var(--cream); color: var(--indigo); }
+.mobile-nav a::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--g300);
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.mobile-nav a:hover::before { background: var(--indigo); }
+.mobile-menu-ctas {
+  padding: 20px;
+  border-top: 1px solid var(--g200);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-cta-ghost {
+  padding: 13px; border-radius: 11px;
+  border: 1.5px solid var(--g200); background: transparent;
+  color: var(--indigo); font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.mobile-cta-ghost:hover { border-color: var(--indigo); background: #eef2ff; }
+.mobile-cta-primary {
+  padding: 13px; border-radius: 11px;
+  border: none; background: var(--indigo);
+  color: var(--white); font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.mobile-cta-primary:hover { background: var(--indigo-dark); }
+
+/* ──────────────────────────────────────
+   SCROLL SPY SIDEBAR
+────────────────────────────────────── */
+.scroll-spy {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+.scroll-spy.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.spy-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--g400);
+  margin-bottom: 8px;
+  padding-left: 18px;
+}
+.spy-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--g400);
+  text-decoration: none;
+  padding: 5px 0 5px 18px;
+  border-left: 2px solid transparent;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.spy-link:hover { color: var(--g900); border-left-color: var(--g300); }
+.spy-link.active { color: var(--indigo); border-left-color: var(--indigo); font-weight: 700; }
+
+/* ──────────────────────────────────────
+   RESPONSIVE
+────────────────────────────────────── */
+@media(max-width:1000px){
+  .hero-inner{grid-template-columns:1fr;}
+  .hero-mockup{display:none;}
+  .problem-header,.features-header{grid-template-columns:1fr;gap:24px;}
+  .pain-grid{grid-template-columns:1fr 1fr;}
+  .bonus-grid,.services-grid,.pkg-grid{grid-template-columns:1fr 1fr;}
+  .how-grid{grid-template-columns:1fr 1fr;}
+  .how-grid::before{display:none;}
+  .recipient-inner{grid-template-columns:1fr;}
+  .features-grid,.trust-grid{grid-template-columns:1fr 1fr;}
+  .footer-inner{grid-template-columns:1fr;}
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .scroll-spy{display:none;}
+  .btn-primary-sm{display:none;}
+  .btn-ghost-sm{font-size:12px;padding:7px 12px;}
+}
+@media(max-width:600px){
+  .pain-grid,.bonus-grid,.services-grid,.pkg-grid,.features-grid,.trust-grid,.how-grid{grid-template-columns:1fr;}
+  .section-wrap,.problem-section,.bonus-section,.how-section,.packages-section,.services-section,.recipient-section,.features-section,.trust-section,.cta-section{padding:64px 20px;}
+  nav{padding:0 20px;}
+  .hero{padding:100px 20px 60px;}
+  footer{padding:40px 20px;}
+  .form-row{grid-template-columns:1fr;}
+  .modal{padding:28px 18px;}
+  .pkg-sel-grid{grid-template-columns:1fr 1fr;}
+}
+
+/* ──────────────────────────────────────
+   THREE-TIER PACKAGES
+────────────────────────────────────── */
+.pkg-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-bottom:32px; }
+.pkg3 { border-radius:20px; padding:36px 30px; border:1.5px solid var(--g200); position:relative; transition:all .2s; display:flex; flex-direction:column; background:var(--white); }
+.pkg3:hover { border-color:var(--indigo); box-shadow:0 16px 48px #4f46e514; transform:translateY(-3px); }
+.pkg3-feat { background:linear-gradient(160deg,var(--navy) 0%,var(--navy-mid) 100%); border-color:transparent; }
+.pkg3-feat:hover { box-shadow:0 20px 56px #1e1b4b44; transform:translateY(-3px); }
+.pkg3-badge { position:absolute; top:-13px; left:50%; transform:translateX(-50%); background:var(--indigo); color:var(--white); padding:4px 18px; border-radius:99px; font-size:11px; font-weight:700; letter-spacing:.07em; white-space:nowrap; }
+.pkg3-tier { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--indigo); margin-bottom:6px; }
+.pkg3-feat .pkg3-tier { color:#a5b4fc; }
+.pkg3-name { font-family:'Instrument Serif',serif; font-size:28px; color:var(--g900); margin-bottom:8px; line-height:1.1; }
+.pkg3-feat .pkg3-name { color:var(--white); }
+.pkg3-desc { font-size:13.5px; color:var(--g500); line-height:1.65; margin-bottom:0; }
+.pkg3-feat .pkg3-desc { color:#a5b4fc; }
+.pkg3-div { height:1px; background:var(--g200); margin:22px 0; }
+.pkg3-feat .pkg3-div { background:rgba(255,255,255,.12); }
+.pkg3-list { list-style:none; display:flex; flex-direction:column; gap:9px; flex:1; }
+.pkg3-list li { display:flex; align-items:flex-start; gap:9px; font-size:13.5px; color:var(--g700); line-height:1.4; }
+.pkg3-feat .pkg3-list li { color:#e0e7ff; }
+.pkg3-btn { margin-top:24px; display:block; text-align:center; padding:13px; border-radius:11px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; border:none; width:100%; }
+.pkg3-note { font-size:11px; color:var(--g400); text-align:center; margin-top:9px; }
+
+/* À la carte bar */
+.alacarte-bar { background:var(--white); border:1.5px solid var(--g200); border-radius:16px; padding:24px 28px; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+.alacarte-label { font-size:16px; font-weight:700; color:var(--g900); margin-bottom:4px; }
+.alacarte-sub { font-size:13.5px; color:var(--g500); line-height:1.6; max-width:600px; }
+.alacarte-btn { padding:11px 24px; border-radius:10px; border:1.5px solid var(--indigo); background:transparent; color:var(--indigo); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
+.alacarte-btn:hover { background:#eef2ff; }
+
+/* ──────────────────────────────────────
+   COLLECTIONS KICKSTART
+────────────────────────────────────── */
+.kickstart-card { background:linear-gradient(135deg,var(--navy) 0%,#1a1547 100%); border-radius:24px; padding:48px; display:grid; grid-template-columns:1fr 320px; gap:48px; align-items:start; border:1px solid rgba(255,255,255,.08); position:relative; overflow:hidden; }
+.kickstart-card::before { content:''; position:absolute; right:-80px; top:-80px; width:280px; height:280px; background:radial-gradient(#4f46e530,transparent 70%); pointer-events:none; }
+.kickstart-eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:#f59e0b; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.kickstart-eyebrow::before { content:'★'; font-size:12px; }
+.kickstart-title { font-family:'Instrument Serif',serif; font-size:clamp(32px,4vw,48px); color:var(--white); margin-bottom:16px; line-height:1.05; }
+.kickstart-body { font-size:15px; color:rgba(255,255,255,.6); line-height:1.78; margin-bottom:28px; }
+.kickstart-eg-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#818cf8; margin-bottom:12px; }
+.kickstart-eg { font-size:13px; color:rgba(255,255,255,.45); line-height:1.65; padding:12px 16px; background:rgba(255,255,255,.05); border-radius:10px; border-left:3px solid #4f46e5; margin-bottom:10px; font-style:italic; }
+.kickstart-right { display:flex; flex-direction:column; gap:0; }
+.kickstart-stat { padding:16px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+.kickstart-stat:last-of-type { border-bottom:none; margin-bottom:20px; }
+.kickstart-stat-num { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#818cf8; margin-bottom:4px; }
+.kickstart-stat-lbl { font-size:14px; font-weight:600; color:var(--white); line-height:1.4; }
+.kickstart-cta { padding:13px 24px; border-radius:11px; border:none; background:var(--indigo); color:var(--white); font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; width:100%; }
+.kickstart-cta:hover { background:var(--indigo-dark); box-shadow:0 4px 16px #4f46e550; }
+
+/* Ad hoc services */
+.adhoc-icon-wrap { width:40px; height:40px; border-radius:10px; background:rgba(79,70,229,.15); border:1px solid rgba(79,70,229,.25); display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+.adhoc-eg { margin-top:14px; padding:10px 14px; background:rgba(255,255,255,.04); border-radius:8px; border-left:2px solid #4f46e5; font-size:12px; color:rgba(255,255,255,.35); line-height:1.6; font-style:italic; }
+.adhoc-eg-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#4f46e5; display:block; margin-bottom:4px; font-style:normal; }
+
+/* Services bottom CTA bar */
+.services-cta-bar { display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-top:48px; padding:28px 32px; background:rgba(255,255,255,.05); border-radius:16px; border:1px solid rgba(255,255,255,.08); }
+
+@media(max-width:1000px) {
+  .pkg-grid-3 { grid-template-columns:1fr; }
+  .kickstart-card { grid-template-columns:1fr; }
+}
+@media(max-width:600px) {
+  .kickstart-card { padding:28px 20px; }
+}
+/* ──────────────────────────────────────
+   PRICING CALCULATOR
+────────────────────────────────────── */
+.calc-wrap { display:grid; grid-template-columns:1fr 340px; gap:32px; align-items:start; }
+.calc-inputs { display:flex; flex-direction:column; gap:0; }
+.calc-section { background:var(--white); border:1px solid var(--g200); border-radius:16px; padding:28px; margin-bottom:16px; }
+.calc-step-label { font-size:13px; font-weight:700; color:var(--g900); margin-bottom:18px; display:flex; align-items:center; gap:10px; }
+.calc-step-num { width:24px; height:24px; border-radius:50%; background:var(--indigo); color:var(--white); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+/* Package selector */
+.calc-pkg-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.calc-pkg-opt { border:1.5px solid var(--g200); border-radius:12px; padding:14px 16px; cursor:pointer; transition:all .15s; background:var(--cream); }
+.calc-pkg-opt:hover { border-color:var(--indigo-mid); }
+.calc-pkg-opt.selected { border-color:var(--indigo); background:#eef2ff; }
+.calc-pkg-tier { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--g400); margin-bottom:3px; }
+.calc-pkg-opt.selected .calc-pkg-tier { color:var(--indigo); }
+.calc-pkg-name { font-size:14px; font-weight:700; color:var(--g700); margin-bottom:8px; }
+.calc-pkg-opt.selected .calc-pkg-name { color:var(--indigo-dark); }
+.calc-pkg-price { font-size:16px; font-weight:800; color:var(--g900); }
+.calc-pkg-price span { font-size:11px; font-weight:500; color:var(--g400); }
+.calc-pkg-opt.selected .calc-pkg-price { color:var(--indigo); }
+
+/* Slider */
+.calc-slider-row { display:flex; align-items:center; gap:16px; margin-bottom:6px; }
+.calc-slider { flex:1; -webkit-appearance:none; height:5px; border-radius:99px; background:var(--g200); outline:none; cursor:pointer; }
+.calc-slider::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:var(--indigo); border:2.5px solid var(--white); box-shadow:0 1px 6px #4f46e540; cursor:pointer; }
+.calc-slider-val { font-size:22px; font-weight:800; color:var(--indigo); min-width:48px; text-align:right; }
+.calc-slider-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--g400); margin-bottom:8px; }
+.calc-note { font-size:12px; color:var(--g400); font-style:italic; margin-top:4px; }
+
+/* Toggle */
+.calc-toggle-row { display:flex; align-items:center; gap:12px; cursor:pointer; margin-bottom:16px; }
+.calc-toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
+.calc-toggle-switch input { opacity:0; width:0; height:0; }
+.calc-toggle-slider { position:absolute; inset:0; background:var(--g200); border-radius:99px; transition:background .2s; cursor:pointer; }
+.calc-toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:var(--white); border-radius:50%; transition:transform .2s; box-shadow:0 1px 3px #0002; }
+.calc-toggle-switch input:checked + .calc-toggle-slider { background:var(--indigo); }
+.calc-toggle-switch input:checked + .calc-toggle-slider::before { transform:translateX(20px); }
+.calc-toggle-label { font-size:14px; font-weight:600; color:var(--g700); }
+.calc-collections-detail { margin-top:4px; padding-top:16px; border-top:1px solid var(--g200); display:flex; flex-direction:column; gap:12px; }
+.calc-collections-detail.hidden { display:none; }
+.calc-field-label { font-size:12.5px; font-weight:600; color:var(--g700); margin-bottom:6px; }
+.calc-input-row { display:flex; align-items:center; border:1.5px solid var(--g200); border-radius:10px; overflow:hidden; background:var(--cream); transition:border-color .15s; }
+.calc-input-row:focus-within { border-color:var(--indigo); background:var(--white); }
+.calc-input-prefix { padding:10px 12px; font-size:14px; font-weight:600; color:var(--g400); border-right:1px solid var(--g200); }
+.calc-text-input { flex:1; padding:10px 13px; border:none; background:transparent; font-size:14px; font-weight:600; color:var(--g900); outline:none; font-family:inherit; }
+.calc-model-choice { margin-top:4px; }
+.calc-model-label { font-size:12.5px; font-weight:600; color:var(--g700); margin-bottom:8px; }
+.calc-model-opts { display:flex; flex-direction:column; gap:8px; }
+.calc-radio { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--g700); cursor:pointer; }
+.calc-radio input { margin-top:2px; accent-color:var(--indigo); }
+
+/* Services checklist */
+.calc-services-list { display:flex; flex-direction:column; gap:2px; }
+.calc-service-row { display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:10px; cursor:pointer; transition:background .15s; }
+.calc-service-row:hover { background:var(--cream); }
+.calc-service-row input[type=checkbox] { width:16px; height:16px; accent-color:var(--indigo); flex-shrink:0; cursor:pointer; }
+.calc-service-row > div:nth-child(2) { flex:1; }
+.calc-svc-name { font-size:13.5px; font-weight:600; color:var(--g900); }
+.calc-svc-desc { font-size:12px; color:var(--g400); margin-top:1px; }
+.calc-svc-price { font-size:13px; font-weight:700; color:var(--indigo); white-space:nowrap; }
+
+/* Output panel */
+.calc-output { background:linear-gradient(160deg,var(--navy),var(--navy-mid)); border-radius:20px; padding:28px; position:sticky; top:84px; color:var(--white); }
+.calc-output-header { margin-bottom:20px; }
+.calc-output-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#818cf8; margin-bottom:4px; }
+.calc-output-pkg { font-size:15px; font-weight:700; color:var(--white); }
+.calc-line-items { display:flex; flex-direction:column; gap:0; margin-bottom:20px; }
+.calc-line { display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.08); }
+.calc-line:last-child { border-bottom:none; }
+.calc-line-label { font-size:13px; color:rgba(255,255,255,.6); }
+.calc-line-val { font-size:13px; font-weight:700; color:var(--white); }
+.calc-line-val.discount { color:#6ee7b7; }
+.calc-total-row { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,.08); border-radius:12px; padding:16px 18px; margin-bottom:10px; }
+.calc-total-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#a5b4fc; }
+.calc-total-note { font-size:11px; color:#6ee7b7; margin-top:2px; }
+.calc-total-val { font-size:28px; font-weight:800; color:var(--white); letter-spacing:-.02em; }
+.calc-onetime-row { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; margin-bottom:16px; }
+.calc-onetime-label { font-size:12px; color:rgba(255,255,255,.5); }
+.calc-onetime-val { font-size:15px; font-weight:700; color:#c7d2fe; }
+.calc-divider { height:1px; background:rgba(255,255,255,.1); margin-bottom:20px; }
+.calc-actions { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.calc-cta-primary { padding:13px; border-radius:11px; border:none; background:var(--white); color:var(--navy); font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; transition:all .15s; }
+.calc-cta-primary:hover { box-shadow:0 4px 16px rgba(0,0,0,.2); transform:translateY(-1px); }
+.calc-cta-secondary { padding:12px; border-radius:11px; border:1.5px solid rgba(255,255,255,.2); background:transparent; color:var(--white); font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .15s; }
+.calc-cta-secondary:hover { border-color:rgba(255,255,255,.5); background:rgba(255,255,255,.08); }
+.calc-fine { font-size:11px; color:rgba(255,255,255,.3); text-align:center; line-height:1.5; }
+
+@media(max-width:1000px) { .calc-wrap { grid-template-columns:1fr; } .calc-output { position:static; } }
+@media(max-width:600px) { .calc-pkg-grid { grid-template-columns:1fr 1fr; } }
+
+/* Agreement type rows + qty controls */
+.calc-type-note { font-size:13px; color:var(--g500); line-height:1.6; margin-bottom:16px; font-style:italic; }
+.calc-type-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--g200); gap:16px; }
+.calc-type-row:last-of-type { border-bottom:none; }
+.calc-type-label { flex:1; min-width:0; }
+.calc-type-name { font-size:14px; font-weight:700; color:var(--g900); margin-bottom:2px; }
+.calc-type-desc { font-size:12px; color:var(--g400); }
+.calc-type-controls { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.calc-qty-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--g200); background:var(--cream); color:var(--g700); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; font-family:inherit; font-weight:600; line-height:1; }
+.calc-qty-btn:hover { border-color:var(--indigo); color:var(--indigo); background:#eef2ff; }
+.calc-qty-val { font-size:18px; font-weight:800; color:var(--indigo); min-width:28px; text-align:center; }
+.calc-volume-bar { margin-top:14px; padding:12px 16px; background:var(--cream); border-radius:10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.calc-volume-label { font-size:13px; color:var(--g500); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.calc-volume-label strong { color:var(--g900); }
+.calc-discount-badge { padding:3px 10px; border-radius:99px; font-size:11px; font-weight:700; background:#d1fae5; color:#065f46; border:1px solid #6ee7b730; }
+.calc-discount-badge.hidden { display:none; }
+.calc-toggle-row { display:flex; align-items:center; gap:12px; margin-bottom:0; cursor:pointer; }
+
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN MODAL ── -->
+<div class="login-overlay hidden" id="loginOverlay" onclick="if(event.target===this)closeLoginModal()">
+  <div class="login-modal">
+    <button class="login-modal-x" onclick="closeLoginModal()">✕</button>
+    <div class="login-modal-title">Welcome back.</div>
+    <div class="login-modal-sub">Choose how you're logging in to BonusBridge.</div>
+    <div class="login-choices">
+      <a href="https://bonusbridge-app.vercel.app/login" target="_blank" class="login-choice" onclick="closeLoginModal()">
+        <div class="login-choice-icon login-choice-icon-issuer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        </div>
+        <div class="login-choice-label login-choice-label-issuer">Issuer</div>
+        <div class="login-choice-title">I manage bonuses</div>
+        <div class="login-choice-desc">HR, Finance, or Admin access to the issuer dashboard</div>
+      </a>
+      <a href="https://bonusbridge-app.vercel.app/login?role=recipient" target="_blank" class="login-choice" onclick="closeLoginModal()">
+        <div class="login-choice-icon login-choice-icon-recipient">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="login-choice-label login-choice-label-recipient">Recipient</div>
+        <div class="login-choice-title">I received a bonus</div>
+        <div class="login-choice-desc">View your agreement, track forgiveness progress, and manage your contact info</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay hidden" id="overlay" onclick="handleOvClick(event)">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal()">✕</button>
+    <div id="mForm">
+      <div class="modal-eyebrow">Get Started</div>
+      <div class="modal-title" id="mTitle">Let's talk about your bonus program.</div>
+      <div class="modal-sub">Tell us about your organization and what you're looking to solve. We'll be in touch within one business day.</div>
+      <div class="pkg-sel-label">I'm interested in</div>
+      <div class="pkg-sel-grid" id="pkgSel">
+        <button class="pkg-sel-opt" onclick="selPkg(this,'BonusBridge Manage')"><div class="pso-tier">Manage</div><div class="pso-name">The Platform</div></button>
+        <button class="pkg-sel-opt" onclick="selPkg(this,'BonusBridge Notify')"><div class="pso-tier">Notify</div><div class="pso-name">Platform + Communications</div></button>
+        <button class="pkg-sel-opt" onclick="selPkg(this,'BonusBridge Execute')"><div class="pso-tier">Execute</div><div class="pso-name">Platform + Comms + Documents</div></button>
+        <button class="pkg-sel-opt" onclick="selPkg(this,'Portfolio Kickstart')"><div class="pso-tier">Service</div><div class="pso-name">Portfolio Kickstart</div></button>
+        <button class="pkg-sel-opt pkg-sel-wide" onclick="selPkg(this,'Not sure yet')"><div class="pso-tier" style="color:var(--g400)">Not sure yet</div><div class="pso-name" style="color:var(--g500)">Help me find the right fit</div></button>
+      </div>
+      <div class="modal-div"></div>
+      <div class="form-row">
+        <div class="form-field"><label>First Name *</label><input type="text" id="fn" placeholder="Jane"/></div>
+        <div class="form-field"><label>Last Name *</label><input type="text" id="ln" placeholder="Smith"/></div>
+      </div>
+      <div class="form-field"><label>Work Email *</label><input type="email" id="em" placeholder="jane@organization.com"/></div>
+      <div class="form-row">
+        <div class="form-field"><label>Organization *</label><input type="text" id="org" placeholder="Organization name"/></div>
+        <div class="form-field"><label>Your Title *</label><input type="text" id="ttl" placeholder="VP of HR"/></div>
+      </div>
+      <div class="form-field">
+        <label>Your Function</label>
+        <select id="fn2">
+          <option value="">Select your area</option>
+          <option>Human Resources / People Operations</option>
+          <option>Finance / Accounting / AP</option>
+          <option>Legal / Compliance</option>
+          <option>Executive Leadership</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>About your bonus program <span style="color:var(--g400);font-weight:400">(optional)</span></label>
+        <textarea id="notes" placeholder="e.g. We issue signing bonuses to 20–30 physicians annually via promissory note..."></textarea>
+      </div>
+      <button class="form-submit" onclick="submitForm()">Get Started →</button>
+      <div class="form-fine">No commitment required. Your information is never shared or sold.</div>
+    </div>
+    <div class="modal-success hidden" id="mSuccess">
+      <div class="success-mark">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="success-title">You're on the bridge.</div>
+      <div class="success-body">Thanks for reaching out. A member of the BonusBridge team will be in touch within one business day to schedule your walkthrough.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <svg width="42" height="26" viewBox="0 0 80 44" fill="none">
+        <line x1="4" y1="40" x2="76" y2="40" stroke="#4f46e5" stroke-width="5" stroke-linecap="round"/>
+        <line x1="4" y1="40" x2="4" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="40" y1="40" x2="40" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="76" y1="40" x2="76" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M4 24 A18 10 0 0 1 40 24" stroke="#4f46e5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M40 24 A18 10 0 0 1 76 24" stroke="#4f46e5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <line x1="16" y1="14.6" x2="16" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+        <line x1="28" y1="14.6" x2="28" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+        <line x1="52" y1="14.6" x2="52" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+        <line x1="64" y1="14.6" x2="64" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+      </svg>
+      <div class="nav-wordmark">Bonus<span>Bridge</span></div>
+    </a>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#bonus-types">Bonus Types</a>
+      <a href="#how">How It Works</a>
+      <a href="#features">Platform</a>
+      <a href="#packages">Packages</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#services">Services</a>
+      <a href="#recipient">Recipients</a>
+      <a href="#team">Team</a>
+    </div>
+    <div class="nav-right">
+      <button class="btn-ghost-sm" onclick="openLoginModal()">Log In</button>
+      <button class="btn-primary-sm" onclick="openModal()">Get Started</button>
+      <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MOBILE MENU ── -->
+<div class="mobile-menu hidden" id="mobileMenu">
+  <div class="mobile-menu-inner">
+    <div class="mobile-menu-header">
+      <div class="nav-logo" style="text-decoration:none;display:flex;align-items:center;gap:12px;">
+        <svg width="38" height="24" viewBox="0 0 80 44" fill="none">
+          <line x1="4" y1="40" x2="76" y2="40" stroke="#4f46e5" stroke-width="5" stroke-linecap="round"/>
+          <line x1="4" y1="40" x2="4" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="40" y1="40" x2="40" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="76" y1="40" x2="76" y2="24" stroke="#4f46e5" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M4 24 A18 10 0 0 1 40 24" stroke="#4f46e5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M40 24 A18 10 0 0 1 76 24" stroke="#4f46e5" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <line x1="16" y1="14.6" x2="16" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+          <line x1="28" y1="14.6" x2="28" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+          <line x1="52" y1="14.6" x2="52" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+          <line x1="64" y1="14.6" x2="64" y2="40" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+        </svg>
+        <span class="nav-wordmark">Bonus<span style="color:var(--indigo)">Bridge</span></span>
+      </div>
+      <button class="mobile-close" onclick="toggleMenu()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <nav class="mobile-nav">
+      <a href="#problem"     onclick="navTo('problem')">The Problem</a>
+      <a href="#bonus-types" onclick="navTo('bonus-types')">Bonus Types</a>
+      <a href="#how"         onclick="navTo('how')">How It Works</a>
+      <a href="#features"    onclick="navTo('features')">Platform</a>
+      <a href="#packages"    onclick="navTo('packages')">Packages</a>
+      <a href="#pricing"     onclick="navTo('pricing')">Pricing</a>
+      <a href="#services"    onclick="navTo('services')">Services</a>
+      <a href="#recipient"   onclick="navTo('recipient')">For Recipients</a>
+      <a href="#team"        onclick="navTo('team')">Team</a>
+    </nav>
+    <div class="mobile-menu-ctas">
+      <button class="mobile-cta-primary" onclick="toggleMenu();openModal()">Get Started →</button>
+      <button onclick="toggleMenu();openLoginModal()" style="display:block;width:100%;text-align:center;padding:13px 20px;border-radius:11px;font-size:15px;font-weight:600;color:var(--indigo);background:#eef2ff;border:none;cursor:pointer;font-family:inherit;margin-top:10px;">Log In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCROLL SPY SIDEBAR (desktop) ── -->
+<div class="scroll-spy" id="scrollSpy">
+  <div class="spy-label">On this page</div>
+  <a class="spy-link active" href="#problem"     data-section="problem">The Problem</a>
+  <a class="spy-link" href="#bonus-types" data-section="bonus-types">Bonus Types</a>
+  <a class="spy-link" href="#how"         data-section="how">How It Works</a>
+  <a class="spy-link" href="#features"    data-section="features">Platform</a>
+  <a class="spy-link" href="#packages"    data-section="packages">Packages</a>
+  <a class="spy-link" href="#pricing"     data-section="pricing">Pricing</a>
+  <a class="spy-link" href="#services"    data-section="services">Services</a>
+  <a class="spy-link" href="#recipient"   data-section="recipient">For Recipients</a>
+  <a class="spy-link" href="#team"        data-section="team">Team</a>
+</div>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-tag fade-up d1">
+        <span class="hero-tag-dot"></span>
+        <span class="hero-tag-text">Bonus Administration Platform</span>
+      </div>
+      <h1 class="fade-up d2">The infrastructure your<br>bonus programs <em>have always needed.</em></h1>
+      <p class="hero-sub fade-up d3">Organizations issuing signing bonuses, starting bonuses, and retention agreements are managing some of the most underadministered obligations in HR. BonusBridge brings structure, visibility, and accountability to every bonus agreement — from execution to final forgiveness. One platform. Every agreement type. Nothing falling through the cracks.</p>
+      <div class="hero-btns fade-up d4">
+        <button class="btn-white" onclick="openModal()">Get Started →</button>
+        <a href="#problem" class="btn-outline-white">See the Problem</a>
+      </div>
+    </div>
+    <div class="hero-mockup fade-up d5">
+      <div class="mockup-header">
+        <div class="mockup-dots">
+          <div class="mockup-dot" style="background:#ff5f57"></div>
+          <div class="mockup-dot" style="background:#febc2e"></div>
+          <div class="mockup-dot" style="background:#28c840"></div>
+        </div>
+        <div class="mockup-title-bar">BonusBridge — Agreement Dashboard</div>
+        <div style="width:52px"></div>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-agreement-title">Active Agreement</div>
+        <div class="mockup-name">Sarah Mitchell, MD</div>
+        <div class="mockup-org">Meridian Health Group · Promissory Note</div>
+        <div class="mockup-progress-label"><span>Forgiveness Progress</span><span style="color:white;font-weight:700">68%</span></div>
+        <div class="mockup-track"><div class="mockup-fill"></div></div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="mockup-stat-label">Principal</div><div class="mockup-stat-val">$75,000</div></div>
+          <div class="mockup-stat"><div class="mockup-stat-label">Forgiven</div><div class="mockup-stat-val green">$51,000</div></div>
+          <div class="mockup-stat"><div class="mockup-stat-label">Remaining</div><div class="mockup-stat-val">$24,000</div></div>
+          <div class="mockup-stat"><div class="mockup-stat-label">Next Imputed</div><div class="mockup-stat-val">$1,495</div></div>
+        </div>
+        <div class="mockup-row"><span class="mockup-row-label">Annual Rate</span><span class="mockup-row-val">5.270%</span></div>
+        <div class="mockup-row"><span class="mockup-row-label">Forgiveness Period</span><span class="mockup-row-val">Biweekly · 52 periods</span></div>
+        <div class="mockup-row"><span class="mockup-row-label">Status</span><span class="mockup-badge">✓ Active</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROBLEM ── -->
+<section class="problem-section" id="problem">
+  <div class="section-inner">
+    <div class="problem-header">
+      <div>
+        <div class="prob-eyebrow fade-up">The Problem</div>
+        <h2 class="prob-title fade-up d1">Bonus programs are<br>high-value. The administration<br>is <em>not.</em></h2>
+      </div>
+      <p class="prob-body fade-up d2">Signing bonuses are one of the most powerful tools organizations have to recruit senior talent — and one of the most poorly administered. The agreement takes weeks to negotiate and minutes to lose track of. Imputed income gets calculated manually, if at all. When someone leaves early, there's no documented process. Whether you're managing five agreements or fifty, the gap between what was promised and what gets administered is the same.</p>
+    </div>
+    <div class="pain-grid fade-up d3">
+      <div class="pain-item">
+        <div class="pain-num">01</div>
+        <h4>No single source of truth</h4>
+        <p>Bonus agreements scatter across HR systems, Finance spreadsheets, and Legal shared drives. Nobody holds the full picture — until it matters.</p>
+      </div>
+      <div class="pain-item">
+        <div class="pain-num">02</div>
+        <h4>Manual imputed income</h4>
+        <p>Payroll calculates taxable imputed income by hand, every pay period, for every active agreement. One formula error creates a W-2 problem.</p>
+      </div>
+      <div class="pain-item">
+        <div class="pain-num">03</div>
+        <h4>No resolution process</h4>
+        <p>When an employee leaves before full forgiveness, many organizations have no documented process — and outstanding balances go unresolved.</p>
+      </div>
+      <div class="pain-item">
+        <div class="pain-num">04</div>
+        <h4>No audit trail</h4>
+        <p>What was the forgiveness schedule? When was the note signed? What was the rate? These questions become expensive to answer after the fact.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BONUS TYPES ── -->
+<section class="bonus-section" id="bonus-types">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up" style="color:#818cf8">Bonus Types</div>
+    <h2 class="s-title fade-up d1" style="color:white;margin-bottom:8px">Built for signing bonuses.<br><em style="color:#a5b4fc">Ready for the rest.</em></h2>
+    <p class="s-sub fade-up d2" style="color:rgba(255,255,255,.45);margin-bottom:48px">Signing bonuses — particularly those structured as forgivable promissory notes — are our core. The amortization, the imputed income calculation, the departure response process when someone leaves early. That's where we go deepest. And because the infrastructure is built for the most complex case, every other bonus type is well within reach.</p>
+    <div class="bonus-grid fade-up d3">
+
+      <div class="bonus-card">
+        <div class="bonus-icon" style="background:#7c3aed1a;border:1px solid #7c3aed33;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h4>Signing Bonus <span style="font-size:11px;font-weight:500;color:rgba(196,181,253,0.6);margin-left:4px">— our core</span></h4>
+        <p>Structured as a forgivable promissory note and issued before the employee starts. Requires amortization, interest calculation, per-period imputed income tracking, DocuSign execution, and a clear departure response process when employment ends early. BonusBridge administers the full lifecycle — and ensures every step is documented, communicated, and traceable.</p>
+        <span class="bonus-pill pill-complex">Primary Focus</span>
+      </div>
+
+      <div class="bonus-card">
+        <div class="bonus-icon" style="background:#4f46e51a;border:1px solid #4f46e533;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h4>Starting &amp; Retention Bonus</h4>
+        <p>Issued through payroll or AP to bring someone on board or keep them through a defined milestone. Simpler than a promissory note — but still deserving of a documented agreement, clear eligibility terms, and real-time visibility for both parties. BonusBridge tracks all of it.</p>
+        <span class="bonus-pill pill-mid">Milestone Tracking</span>
+      </div>
+
+      <div class="bonus-card">
+        <div class="bonus-icon" style="background:#4f46e51a;border:1px solid #4f46e533;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h4>Performance &amp; Production Bonus</h4>
+        <p>Sales bonuses, production incentives, quality awards — any bonus tied to measurable output. BonusBridge tracks what was earned, what has been distributed, and what remains. Recipients see their running totals in real time. Issuers get a clean, auditable record. Not our founding use case — but a natural fit for organizations already on the platform.</p>
+        <span class="bonus-pill pill-mid">Extended Capability</span>
+      </div>
+
+      <div class="bonus-card">
+        <div class="bonus-icon" style="background:#05966918;border:1px solid #05966930;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h4>Custom &amp; Ad Hoc Programs</h4>
+        <p>Have a bonus structure that doesn't fit a standard template? Good — neither did most of our clients' signing bonus arrangements before we worked with them. If there's an agreement, a recipient, and an amount to track, we'll figure it out. Custom engagements are a core part of how we work.</p>
+        <span class="bonus-pill pill-simple">Let's Talk</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="how-section" id="how">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up">How It Works</div>
+    <h2 class="s-title fade-up d1">From signed note to <em>full forgiveness</em></h2>
+    <p class="s-sub fade-up d2">BonusBridge manages the complete signing bonus lifecycle — structure, execute, track, and close. Every step documented. Every stakeholder informed.</p>
+    <div class="how-grid fade-up d3">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <h4>Structure the Agreement</h4>
+        <p>Configure bonus type, amount, interest rate, forgiveness schedule, and eligibility terms. BonusBridge generates the full amortization schedule instantly.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <h4>Execute &amp; Document</h4>
+        <p>Generate the promissory note and send for e-signature via DocuSign. Every signed document is stored in a secure vault — timestamped, retrievable, and audit-ready from day one.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <h4>Track & Report</h4>
+        <p>Monitor forgiveness in real time. Export per-period imputed income amounts directly to your payroll team — calculated, formatted, and ready to apply. Every event is timestamped and audit-ready.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">4</div>
+        <h4>Close or Resolve</h4>
+        <p>At full forgiveness, BonusBridge closes the file. If a departure is triggered before full forgiveness, the platform initiates a structured notification workflow — balance statements, formal repayment notices, and a documented communication record your team can act on.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="features-section" id="features">
+  <div class="section-inner">
+    <div class="features-header">
+      <div>
+        <div class="s-eyebrow fade-up">Platform Features</div>
+        <h2 class="s-title fade-up d1" style="margin-bottom:0">Built by people who spent<br>years <em>living this problem.</em></h2>
+      </div>
+      <p class="fade-up d2" style="font-size:16px;color:var(--g500);line-height:1.78;align-self:end">BonusBridge was built by finance and HR professionals who spent years managing bonus programs in spreadsheets, chasing imputed income calculations, and learning the hard way what happens when someone leaves before their note is up. Every feature exists because we needed it.</p>
+    </div>
+    <div class="features-grid fade-up d3">
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <h4>Amortization Engine</h4>
+        <p>Any forgiveness frequency — biweekly, semi-monthly, or monthly. Supports fixed rates, AFR short and mid-term, prime-based, and 0% non-interest structures.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h4>Imputed Income Calculation</h4>
+        <p>Per-period amounts calculated and ready to hand to payroll every cycle. BonusBridge does the math — your payroll team applies it. Eliminates manual calculation risk and gives payroll a clean, reliable number every period.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <h4>Real-Time Dashboards</h4>
+        <p>Issuer and recipient views update together. Every stakeholder sees the same forgiveness balance, next period amount, and projected close date.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <h4>Condition Monitoring</h4>
+        <p>Define eligibility and employment conditions upfront. BonusBridge alerts when conditions change and initiates the resolution workflow automatically.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
+        <h4>DocuSign Integration</h4>
+        <p>Generate and execute promissory notes, agreements, and resolution letters directly within BonusBridge. No third-party document workflow required.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        <h4>Collections Management</h4>
+        <p>When a recipient leaves early, BonusBridge generates demand letters, tracks outstanding balances, and manages the collections communication — giving your team a defensible, documented process without involving outside counsel for routine cases.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+        <h4>Records Retention</h4>
+        <p>Every document, transaction, and status event retained in a secure vault — audit-ready for as long as your organization needs it.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
+        <h4>Export &amp; Reporting</h4>
+        <p>One-click exports for payroll, accounting, and tax teams. Amortization PDFs, imputed income summaries, and reconciliation reports at any time.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <h4>Role-Based Access</h4>
+        <p>HR, Finance, Legal, and recipient access levels fully separated. Each party sees exactly what they need — and nothing outside their role.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PACKAGES ── -->
+<section id="packages" style="background:var(--white);padding:100px 40px;">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up">Packages</div>
+    <h2 class="s-title fade-up d1">Three products.<br><em>Pick the one that fits.</em></h2>
+    <p class="s-sub fade-up d2">Each tier is complete on its own. Upgrade when you're ready — or start at the top.</p>
+
+    <div class="pkg-grid-3 fade-up d3">
+
+      <div class="pkg3">
+        <div class="pkg3-tier">Manage</div>
+        <div class="pkg3-name">Platform access, your team drives.</div>
+        <div class="pkg3-div"></div>
+        <ul class="pkg3-list">
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Agreement tracking &amp; amortization</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Issuer &amp; recipient dashboards</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Data exports for payroll &amp; reporting</li>
+        </ul>
+        <button class="pkg3-btn pb-outline" onclick="openModal('BonusBridge Manage')">Get Started</button>
+      </div>
+
+      <div class="pkg3 pkg3-feat">
+        <div class="pkg3-badge">Most Popular</div>
+        <div class="pkg3-tier">Notify</div>
+        <div class="pkg3-name">Manage + departure response communications.</div>
+        <div class="pkg3-div"></div>
+        <ul class="pkg3-list">
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Everything in Manage</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Issuer-configured eligibility triggers</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Automated notices &amp; communication log</li>
+        </ul>
+        <button class="pkg3-btn pb-white" onclick="openModal('BonusBridge Notify')">Get Started</button>
+      </div>
+
+      <div class="pkg3">
+        <div class="pkg3-tier">Execute</div>
+        <div class="pkg3-name">Notify + document generation &amp; retention.</div>
+        <div class="pkg3-div"></div>
+        <ul class="pkg3-list">
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Everything in Notify</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agreement &amp; promissory note generation</li>
+          <li><svg class="pkg-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>DocuSign e-signature &amp; document vault</li>
+        </ul>
+        <button class="pkg3-btn pb-solid" onclick="openModal('BonusBridge Execute')">Get Started</button>
+      </div>
+
+    </div>
+
+    <div class="alacarte-bar fade-up d4">
+      <div class="alacarte-left">
+        <div class="alacarte-label">À la carte services available</div>
+        <div class="alacarte-sub">Not sure which tier fits? Every engagement can be tailored. Pricing is based on scope.</div>
+      </div>
+      <button class="alacarte-btn" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">See Services →</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── PRICING CALCULATOR ── -->
+<section id="pricing" style="background:var(--cream);padding:100px 40px;">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up">Pricing</div>
+    <h2 class="s-title fade-up d1">Per agreement. Per month.<br><em>Two rates. That's it.</em></h2>
+    <p class="s-sub fade-up d2">Promissory notes carry more complexity — amortization, interest, imputed income. All other bonus types are straightforward. Pricing reflects that distinction.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start;" class="fade-up d3" id="calcWrap">
+
+      <!-- LEFT -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Package -->
+        <div style="background:var(--white);border:1px solid var(--g200);border-radius:16px;padding:28px;">
+          <div style="font-size:13px;font-weight:700;color:var(--g900);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--indigo);color:white;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">1</span>
+            Select your package
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <div class="bb-pkg selected" data-pkg="manage" data-note="18" data-other="9" onclick="bbSelectPkg(this)" style="border:1.5px solid var(--indigo);background:#eef2ff;border-radius:12px;padding:14px;cursor:pointer;transition:all .15s;text-align:center;">
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--indigo);margin-bottom:6px;">Manage</div>
+              <div style="font-size:13px;font-weight:600;color:var(--indigo-dark);">$18 · $9<span style="font-size:10px;font-weight:400;color:var(--g400);display:block;margin-top:2px;">/agreement/mo</span></div>
+            </div>
+            <div class="bb-pkg" data-pkg="notify" data-note="30" data-other="16" onclick="bbSelectPkg(this)" style="border:1.5px solid var(--g200);background:var(--cream);border-radius:12px;padding:14px;cursor:pointer;transition:all .15s;text-align:center;">
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g400);margin-bottom:6px;">Notify</div>
+              <div style="font-size:13px;font-weight:600;color:var(--g700);">$30 · $16<span style="font-size:10px;font-weight:400;color:var(--g400);display:block;margin-top:2px;">/agreement/mo</span></div>
+            </div>
+            <div class="bb-pkg" data-pkg="execute" data-note="45" data-other="24" onclick="bbSelectPkg(this)" style="border:1.5px solid var(--g200);background:var(--cream);border-radius:12px;padding:14px;cursor:pointer;transition:all .15s;text-align:center;">
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g400);margin-bottom:6px;">Execute</div>
+              <div style="font-size:13px;font-weight:600;color:var(--g700);">$45 · $24<span style="font-size:10px;font-weight:400;color:var(--g400);display:block;margin-top:2px;">/agreement/mo</span></div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--g400);font-style:italic;">Left rate = promissory notes &nbsp;·&nbsp; Right rate = starting &amp; retention bonuses</div>
+        </div>
+
+        <!-- Counts -->
+        <div style="background:var(--white);border:1px solid var(--g200);border-radius:16px;padding:28px;">
+          <div style="font-size:13px;font-weight:700;color:var(--g900);margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--indigo);color:white;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">2</span>
+            Active agreements
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--g200);gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;color:var(--g900);">Promissory Notes</div>
+              <div style="font-size:11px;color:var(--g400);margin-top:2px;">Signing bonuses — forgivable note structure</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div style="display:flex;align-items:center;border:1.5px solid var(--g200);border-radius:8px;overflow:hidden;background:var(--white);height:40px;" onfocusin="this.style.borderColor='var(--indigo)'" onfocusout="this.style.borderColor='var(--g200)'">
+                <span style="padding:0 8px;font-size:13px;color:var(--g400);background:var(--cream);height:100%;display:flex;align-items:center;border-right:1px solid var(--g200);">avg $</span>
+                <input id="bbNoteAvg" type="number" min="0" value="50000" oninput="bbCalc()" style="width:80px;border:none;outline:none;padding:0 8px;font-size:13px;font-weight:700;color:var(--indigo);font-family:inherit;background:var(--white);-moz-appearance:textfield;">
+              </div>
+              <div style="display:flex;align-items:center;">
+                <button onclick="bbAdj('bbNoteQty',-1)" style="width:36px;height:40px;border-radius:8px 0 0 8px;border:1.5px solid var(--g200);border-right:none;background:var(--cream);color:var(--g700);font-size:18px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.borderColor='var(--indigo)';this.style.color='var(--indigo)'" onmouseout="this.style.borderColor='var(--g200)';this.style.color='var(--g700)'">−</button>
+                <input id="bbNoteQty" type="number" min="0" value="50" oninput="bbCalc()" style="width:52px;height:40px;border:1.5px solid var(--g200);border-left:none;border-right:none;text-align:center;font-size:16px;font-weight:800;color:var(--indigo);font-family:inherit;outline:none;background:var(--white);-moz-appearance:textfield;">
+                <button onclick="bbAdj('bbNoteQty',1)" style="width:36px;height:40px;border-radius:0 8px 8px 0;border:1.5px solid var(--g200);border-left:none;background:var(--cream);color:var(--g700);font-size:18px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.borderColor='var(--indigo)';this.style.color='var(--indigo)'" onmouseout="this.style.borderColor='var(--g200)';this.style.color='var(--g700)'">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;color:var(--g900);">Starting &amp; Retention Bonuses</div>
+              <div style="font-size:11px;color:var(--g400);margin-top:2px;">Payroll-based or milestone-driven agreements</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div style="display:flex;align-items:center;border:1.5px solid var(--g200);border-radius:8px;overflow:hidden;background:var(--white);height:40px;" onfocusin="this.style.borderColor='var(--indigo)'" onfocusout="this.style.borderColor='var(--g200)'">
+                <span style="padding:0 8px;font-size:13px;color:var(--g400);background:var(--cream);height:100%;display:flex;align-items:center;border-right:1px solid var(--g200);">avg $</span>
+                <input id="bbOtherAvg" type="number" min="0" value="10000" oninput="bbCalc()" style="width:80px;border:none;outline:none;padding:0 8px;font-size:13px;font-weight:700;color:var(--indigo);font-family:inherit;background:var(--white);-moz-appearance:textfield;">
+              </div>
+              <div style="display:flex;align-items:center;">
+                <button onclick="bbAdj('bbOtherQty',-1)" style="width:36px;height:40px;border-radius:8px 0 0 8px;border:1.5px solid var(--g200);border-right:none;background:var(--cream);color:var(--g700);font-size:18px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.borderColor='var(--indigo)';this.style.color='var(--indigo)'" onmouseout="this.style.borderColor='var(--g200)';this.style.color='var(--g700)'">−</button>
+                <input id="bbOtherQty" type="number" min="0" value="50" oninput="bbCalc()" style="width:52px;height:40px;border:1.5px solid var(--g200);border-left:none;border-right:none;text-align:center;font-size:16px;font-weight:800;color:var(--indigo);font-family:inherit;outline:none;background:var(--white);-moz-appearance:textfield;">
+                <button onclick="bbAdj('bbOtherQty',1)" style="width:36px;height:40px;border-radius:0 8px 8px 0;border:1.5px solid var(--g200);border-left:none;background:var(--cream);color:var(--g700);font-size:18px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.borderColor='var(--indigo)';this.style.color='var(--indigo)'" onmouseout="this.style.borderColor='var(--g200)';this.style.color='var(--g700)'">+</button>
+              </div>
+            </div>
+          </div>
+
+        <div style="font-size:11px;color:var(--g400);font-style:italic;padding-top:8px;">Volume discounts at 10, 25, and 50+ agreements. $99/mo minimum. *Pricing reflects monthly per-agreement fees only — onboarding, implementation, and à la carte services are scoped separately.</div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Output -->
+      <div style="background:linear-gradient(160deg,var(--navy),var(--navy-mid));border-radius:20px;padding:28px;position:sticky;top:84px;color:white;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:4px;">Your Estimate</div>
+        <div id="bbPkgLabel" style="font-size:15px;font-weight:700;color:white;margin-bottom:24px;">Manage</div>
+
+        <div id="bbNoteRow" style="display:none;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">
+          <div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);">Promissory notes</div>
+            <div id="bbNoteDetail" style="font-size:10px;color:rgba(255,255,255,.3);margin-top:1px;"></div>
+          </div>
+          <span id="bbNoteOut" style="font-size:13px;font-weight:700;color:white;margin-left:12px;"></span>
+        </div>
+
+        <div id="bbOtherRow" style="display:none;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">
+          <div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);">Starting &amp; retention</div>
+            <div id="bbOtherDetail" style="font-size:10px;color:rgba(255,255,255,.3);margin-top:1px;"></div>
+          </div>
+          <span id="bbOtherOut" style="font-size:13px;font-weight:700;color:white;margin-left:12px;"></span>
+        </div>
+
+        <div id="bbDiscRow" style="display:none;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">
+          <span id="bbDiscLabel" style="font-size:12px;color:rgba(255,255,255,.5);"></span>
+          <span id="bbDiscOut" style="font-size:13px;font-weight:700;color:#6ee7b7;"></span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.08);border-radius:12px;padding:16px 18px;margin:20px 0 16px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#a5b4fc;">Monthly</div>
+            <div id="bbAnnualOut" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;"></div>
+          </div>
+          <div id="bbMonthly" style="font-size:32px;font-weight:800;letter-spacing:-.02em;">—</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;margin-bottom:6px;">Scoped separately</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;">Portfolio Kickstart · Performance programs · À la carte services</div>
+        </div>
+
+        <!-- ROI callout -->
+        <div id="bbRoi" style="display:none;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#a5b4fc;margin-bottom:6px;">What you're protecting</div>
+          <div id="bbRoiText" style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.65;"></div>
+        </div>
+
+        <button onclick="openModal()" style="width:100%;padding:13px;border-radius:11px;border:none;background:white;color:var(--navy);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.2)'" onmouseout="this.style.boxShadow='none'">Get Started →</button>
+        <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;margin-top:10px;line-height:1.5;">Estimates are indicative. Final pricing confirmed during onboarding.</div>
+      </div>
+
+    </div>
+
+    <style>
+      .bb-pkg:hover { border-color:var(--indigo-mid) !important; background:#f5f3ff !important; }
+      .bb-pkg.selected { border-color:var(--indigo) !important; background:#eef2ff !important; }
+      input[type=number]::-webkit-outer-spin-button,
+      input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+      @media(max-width:900px) { #calcWrap { grid-template-columns:1fr !important; } }
+    </style>
+  </div>
+</section>
+
+<!-- ── SERVICES ── -->
+<section id="services" style="background:var(--g900);padding:100px 40px;">
+  <div class="section-inner">
+
+    <!-- Portfolio Kickstart — hero card -->
+    <div class="kickstart-card fade-up">
+      <div class="kickstart-left">
+        <div class="kickstart-eyebrow">Featured Service</div>
+        <h3 class="kickstart-title">Portfolio <em>Kickstart</em></h3>
+        <p class="kickstart-sub">Most organizations issuing bonuses have no clear picture of what's been fully forgiven, what's still active, and what left with a departing employee and was never tracked. BonusBridge works directly with your team to audit your full bonus portfolio — reconstructing agreement history, calculating current balances, and documenting what's outstanding versus what's been resolved. You leave with a complete, accurate picture of where things stand. What you do next is up to you.</p>
+        <div class="kickstart-examples">
+          <div class="kickstart-eg-label">How it typically works</div>
+          <div class="kickstart-eg">A health system with three years of physician signing bonuses has never done a full reconciliation. BonusBridge combs through HR records, finance data, and payroll history to produce an agreement-by-agreement status report — including balances that were never tracked after departure.</div>
+          <div class="kickstart-eg">A growing employer onboarding to BonusBridge runs a Kickstart first — so every active, expired, and unresolved agreement is accounted for before a single new one is entered into the platform.</div>
+        </div>
+      </div>
+      <div class="kickstart-right">
+        <div class="kickstart-stat">
+          <div class="kickstart-stat-num">Step 1</div>
+          <div class="kickstart-stat-lbl">We review your existing records — HR, payroll, and finance</div>
+        </div>
+        <div class="kickstart-stat">
+          <div class="kickstart-stat-num">Step 2</div>
+          <div class="kickstart-stat-lbl">Every agreement is catalogued — active, forgiven, and unresolved</div>
+        </div>
+        <div class="kickstart-stat">
+          <div class="kickstart-stat-num">Step 3</div>
+          <div class="kickstart-stat-lbl">Outstanding balances calculated and documented</div>
+        </div>
+        <div class="kickstart-stat">
+          <div class="kickstart-stat-num">Step 4</div>
+          <div class="kickstart-stat-lbl">Full portfolio report delivered — your team decides next steps</div>
+        </div>
+        <button class="kickstart-cta" onclick="openModal('Portfolio Kickstart')">Ask About This →</button>
+        <div style="margin-top:16px;font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;font-style:italic;">For most organizations, the recovery identified through a Portfolio Kickstart more than covers the cost of onboarding — before the platform subscription even begins.</div>
+      </div>
+    </div>
+
+    <!-- À la carte services -->
+    <div style="margin-top:72px;">
+      <div class="s-eyebrow fade-up" style="color:#818cf8">À La Carte Services</div>
+      <h2 class="s-title fade-up d1" style="color:white;margin-bottom:8px">Every organization is<br><em style="color:#a5b4fc">different. So is our work.</em></h2>
+      <p class="s-sub fade-up d2" style="color:rgba(255,255,255,.45);margin-bottom:40px">No fixed menu, no forced packages. Every engagement is scoped to your situation. No standard rate card — just a conversation about what you need and what it takes to deliver it. Here are the kinds of engagements we take on.</p>
+
+      <div class="adhoc-grid fade-up d3">
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <h4>Portfolio Audit &amp; Onboarding</h4>
+          <p>We inventory every active agreement, reconstruct amortization schedules, and bring your full portfolio onto BonusBridge regardless of how — or whether — it was documented before.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> A growing company with 40 active signing bonuses tracked across three spreadsheets. BonusBridge reconstructs every schedule and migrates all agreements in a single onboarding engagement.</div>
+        </div>
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <h4>Historical Imputed Income Reconstruction</h4>
+          <p>If imputed income was never calculated or reported correctly, we reconstruct the record period by period — providing documentation your payroll or tax advisors can act on with confidence.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> Two years of biweekly imputed income never added to payroll. BonusBridge reconstructs the full schedule and delivers a period-by-period correction report.</div>
+        </div>
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+          <h4>Bonus Structure Consulting</h4>
+          <p>Not sure whether a promissory note, a payroll bonus, or a structured repayment arrangement is right for your situation? We consult on the administrative and operational trade-offs before you commit to a structure — so you're set up to administer it cleanly from day one.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> A PE-backed firm onboarding 12 new executives needs guidance on whether signing bonuses should be structured as forgivable notes or straight payroll advances — given their HR setup and administrative capacity. BonusBridge maps out the operational implications of each approach.</div>
+        </div>
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
+          <h4>Agreement &amp; Policy Templates</h4>
+          <p>We develop standard promissory note templates, forgiveness schedules, and internal collections policies tailored to your organization — ready to use inside BonusBridge or hand off to legal for review.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> An HR team that has been using informal offer letter language for signing bonuses needs a proper promissory note template and a written collections policy before the next hire cycle.</div>
+        </div>
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+          <h4>Payroll Export Configuration</h4>
+          <p>We configure BonusBridge exports to match your payroll system's format — so imputed income amounts flow directly into your existing workflow without manual re-entry or reconciliation.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> An organization running ADP Workforce Now needs imputed income delivered in a specific file format per payroll cycle. BonusBridge configures a custom export that drops directly into their import workflow.</div>
+        </div>
+
+        <div class="adhoc-card">
+          <div class="adhoc-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h4>Ongoing Advisory Support</h4>
+          <p>For organizations that want continued access to expertise — new agreement structures, policy questions, edge cases, or just a knowledgeable voice when something unusual comes up. Engaged on an as-needed basis.</p>
+          <div class="adhoc-eg"><span class="adhoc-eg-label">Example</span> A Director of HR wants a standing engagement to review new bonus structures quarterly and have someone to call when a recipient situation gets complicated.</div>
+        </div>
+
+      </div>
+
+      <div class="services-cta-bar fade-up d4">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px">Not sure what you need?</div>
+          <div style="font-size:14px;color:rgba(255,255,255,.45);">That's exactly what the first conversation is for. No scope required.</div>
+        </div>
+        <button class="btn-white" onclick="openModal()" style="white-space:nowrap;padding:12px 28px;border-radius:10px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;">Get Started →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── RECIPIENT ── -->
+<section class="recipient-section" id="recipient">
+  <div class="recipient-inner">
+    <div>
+      <div class="s-eyebrow fade-up">For Recipients</div>
+      <h2 class="s-title fade-up d1">When you choose BonusBridge,<br>your recipients <em>benefit too.</em></h2>
+      <p class="fade-up d2" style="font-size:15.5px;color:var(--g500);line-height:1.78;margin-bottom:4px">The recipient portal is a core part of what makes BonusBridge valuable to the people you're investing in. Every recipient gets a clear, professional portal that answers the questions they'd otherwise be asking your HR team.</p>
+      <ul class="recipient-list fade-up d3">
+        <li>
+          <div class="recipient-list-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          Real-time forgiveness balance and progress
+        </li>
+        <li>
+          <div class="recipient-list-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          Per-period imputed income — no W-2 surprises at year-end
+        </li>
+        <li>
+          <div class="recipient-list-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          Full agreement history and signed documents
+        </li>
+        <li>
+          <div class="recipient-list-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          Projected completion date and remaining balance
+        </li>
+        <li>
+          <div class="recipient-list-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          Clear communication if early departure triggers a balance — no surprises, no confusion
+        </li>
+      </ul>
+    </div>
+    <div class="r-visual fade-up d2">
+      <div class="r-portal-chip">Recipient Portal</div>
+      <div class="r-user-name">Sarah Mitchell, MD</div>
+      <div class="r-org">Meridian Health Group · Signing Bonus Agreement</div>
+      <div class="r-progress-lbl"><span>Forgiveness Progress</span><span style="color:white">68% Complete</span></div>
+      <div class="r-track"><div class="r-fill"></div></div>
+      <div class="r-grid">
+        <div class="r-stat"><div class="r-stat-lbl">Original Loan</div><div class="r-stat-val">$75,000</div></div>
+        <div class="r-stat"><div class="r-stat-lbl">Forgiven to Date</div><div class="r-stat-val green">$51,000</div></div>
+        <div class="r-stat"><div class="r-stat-lbl">Remaining Balance</div><div class="r-stat-val">$24,000</div></div>
+        <div class="r-stat"><div class="r-stat-lbl">Next Imputed Income</div><div class="r-stat-val">$1,495</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TEAM ── -->
+<section id="team" style="background:var(--white);padding:100px 40px;">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up">Why We Built This</div>
+    <h2 class="s-title fade-up d1">No department owned it.<br><em>So we did.</em></h2>
+
+    <div style="max-width:780px;margin-bottom:56px;" class="fade-up d2">
+      <p style="font-size:17px;color:var(--g700);line-height:1.85;margin-bottom:20px;">Ask any organization who owns the signing bonus process end to end. You'll get a different answer depending on who you ask — and none of them will be fully right. Talent Acquisition negotiated the offer. Legal drafted the note. HR processed the hire. Accounts Payable issued the check. Payroll handles the imputed income — or assumes someone else does. Finance tracks the amortization schedule — somewhere. Tax is aware it exists. And when an employee leaves before their note is forgiven, every department looks at every other department, and nobody moves.</p>
+      <p style="font-size:17px;color:var(--g700);line-height:1.85;margin-bottom:20px;">This isn't a failure of effort. It's a failure of structure. Signing bonuses are genuinely cross-functional — and in most organizations, that means they belong to everyone in theory and no one in practice. The result is a process managed in fragments: spreadsheets that only one person understands, documents filed in the wrong place, imputed income that never makes it to payroll, and outstanding balances that sit unresolved for years because no one has the full picture or the clear authority to act on it.</p>
+      <p style="font-size:17px;color:var(--g700);line-height:1.85;">BonusBridge was built by people who recognized this gap for what it was — not a minor administrative inconvenience, but a genuine source of tax, legal, compliance, and financial risk that organizations were absorbing without fully understanding it. Professionals with careers spent working across the finance, compensation, and operations functions that this problem touches. People who saw the compartmentalization clearly enough to understand why no single department had ever solved it — and who decided to build the infrastructure that finally could.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px;" class="fade-up d3">
+      <div style="background:var(--g900);border-radius:16px;padding:28px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:12px;">Many Stakeholders. No Owner.</div>
+        <p style="font-size:13.5px;color:rgba(255,255,255,.55);line-height:1.7;">Accounting. Payroll. Legal. HR. Talent Acquisition. Accounts Payable. Accounts Receivable. Tax. Hiring Managers. Every function has a stake in the signing bonus — and every function assumes someone else is managing it end to end. The handoffs are where it falls apart.</p>
+      </div>
+      <div style="background:var(--g900);border-radius:16px;padding:28px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:12px;">Real Risk. Unperceived.</div>
+        <p style="font-size:13.5px;color:rgba(255,255,255,.55);line-height:1.7;">Imputed income never reaching payroll. Outstanding balances abandoned because no department claims ownership. Promissory notes never properly executed. Administrative exposure accumulating quietly in the background. Not hypothetical — the predictable result of a fragmented process with no single point of accountability.</p>
+      </div>
+      <div style="background:var(--g900);border-radius:16px;padding:28px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#818cf8;margin-bottom:12px;">Recipients Left in the Dark.</div>
+        <p style="font-size:13.5px;color:rgba(255,255,255,.55);line-height:1.7;">"I didn't know I still owed money." "Nobody told me how this was calculated." "Why is this on my W-2?" Recipients sign agreements without truly understanding them — and receive no visibility until something goes wrong. BonusBridge changes that. Real-time balances. Clear calculations. No surprises.</p>
+      </div>
+    </div>
+
+    <div style="background:var(--cream);border:1.5px solid var(--g200);border-radius:16px;padding:32px 36px;display:grid;grid-template-columns:1fr auto;gap:32px;align-items:center;" class="fade-up d4">
+      <div>
+        <div style="font-size:17px;font-weight:700;color:var(--g900);margin-bottom:8px;line-height:1.4;">We built BonusBridge because this problem deserves a real solution — not another spreadsheet, not another workaround, not another department meeting that ends with no one taking ownership.</div>
+        <div style="font-size:14px;color:var(--g500);line-height:1.7;">One platform that sees the whole picture — because for the first time, someone finally did.</div>
+      </div>
+      <button onclick="openModal()" style="padding:13px 28px;border-radius:11px;border:none;background:var(--indigo);color:var(--white);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;" onmouseover="this.style.background='var(--indigo-dark)'" onmouseout="this.style.background='var(--indigo)'">Get Started &#8594;</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── TRUST ── -->
+<section class="trust-section">
+  <div class="section-inner">
+    <div class="s-eyebrow fade-up" style="color:#818cf8">Why BonusBridge</div>
+    <h2 class="s-title fade-up d1" style="color:white;margin-bottom:0">The stakes are high.<br><em style="color:#a5b4fc">The administration should match.</em></h2>
+    <div class="trust-grid fade-up d2">
+      <div class="trust-card">
+        <span class="trust-quote-mark">"</span>
+        <p class="trust-quote">We were managing $4M in active signing bonuses across a shared spreadsheet. When two physicians left in the same quarter, we had no documented process. BonusBridge would have saved us the exposure — and the headache.</p>
+        <div class="trust-author"><div class="trust-av">DH</div><div><div class="trust-name">Director of Human Resources</div><div class="trust-role">Regional Health System</div></div></div>
+      </div>
+      <div class="trust-card">
+        <span class="trust-quote-mark">"</span>
+        <p class="trust-quote">The imputed income piece alone justifies it. Every pay period, payroll was calculating the taxable amount by hand for every active note. One error creates a W-2 problem. Now it's just there — accurate, exported, done.</p>
+        <div class="trust-author"><div class="trust-av">MK</div><div><div class="trust-name">VP of Finance</div><div class="trust-role">Private Equity-Backed Firm</div></div></div>
+      </div>
+      <div class="trust-card">
+        <span class="trust-quote-mark">"</span>
+        <p class="trust-quote">We had a portfolio of retention bonuses that had never been formally documented. BonusBridge's audit service reconstructed every agreement and got us current in weeks. We had no idea what we were sitting on.</p>
+        <div class="trust-author"><div class="trust-av">RC</div><div><div class="trust-name">Chief People Officer</div><div class="trust-role">Multi-Site Healthcare Organization</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="cta-orb-1"></div>
+  <div class="cta-orb-2"></div>
+  <div class="cta-inner">
+    <h2 class="cta-title fade-up">Ready to build the infrastructure<br>your bonus programs <em>deserve?</em></h2>
+    <p class="cta-sub fade-up d1">Start with the package that fits today. Add services as you need them. BonusBridge scales with your program.</p>
+    <div class="cta-btns fade-up d2">
+      <button class="btn-white" onclick="openModal()">Get Started →</button>
+      <a href="#packages" class="btn-outline-white">View Packages</a>
+    </div>
+    <div style="margin-top:24px;font-size:14px;color:rgba(165,180,252,.6);position:relative;z-index:1;">Or reach out directly — <a href="/cdn-cgi/l/email-protection#dda9b5b8bfb2b3a8aebfafb4b9bab8a9b8bcb09dbab0bcb4b1f3beb2b0" style="color:#a5b4fc;font-weight:600;text-decoration:underline;text-underline-offset:3px;"><span class="__cf_email__" data-cfemail="0e7a666b6c61607b7d6c7c676a696b7a6b6f634e69636f6762206d6163">[email&#160;protected]</span></a></div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">
+        <svg width="36" height="22" viewBox="0 0 80 44" fill="none">
+          <line x1="4" y1="40" x2="76" y2="40" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+          <line x1="4" y1="40" x2="4" y2="24" stroke="#818cf8" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="40" y1="40" x2="40" y2="24" stroke="#818cf8" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="76" y1="40" x2="76" y2="24" stroke="#818cf8" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M4 24 A18 10 0 0 1 40 24" stroke="#818cf8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M40 24 A18 10 0 0 1 76 24" stroke="#818cf8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <line x1="16" y1="14.6" x2="16" y2="40" stroke="#c4b5fd" stroke-width="1.3" stroke-linecap="round" opacity=".5"/>
+          <line x1="28" y1="14.6" x2="28" y2="40" stroke="#c4b5fd" stroke-width="1.3" stroke-linecap="round" opacity=".5"/>
+          <line x1="52" y1="14.6" x2="52" y2="40" stroke="#c4b5fd" stroke-width="1.3" stroke-linecap="round" opacity=".5"/>
+          <line x1="64" y1="14.6" x2="64" y2="40" stroke="#c4b5fd" stroke-width="1.3" stroke-linecap="round" opacity=".5"/>
+        </svg>
+        <div class="footer-wordmark">Bonus<span>Bridge</span></div>
+      </div>
+      <div class="footer-tagline">The signing bonus administration platform. Built for the whole bonus lifecycle.</div>
+      <a href="/cdn-cgi/l/email-protection#cabea2afa8a5a4bfb9a8b8a3aeadafbeafaba78aada7aba3a6e4a9a5a7" style="display:inline-block;margin-top:12px;font-size:13px;color:rgba(255,255,255,.5);text-decoration:none;transition:color .15s;" onmouseover="this.style.color='rgba(255,255,255,.85)'" onmouseout="this.style.color='rgba(255,255,255,.5)'"><span class="__cf_email__" data-cfemail="5e2a363b3c31302b2d3c2c373a393b2a3b3f331e39333f3732703d3133">[email&#160;protected]</span></a>
+    </div>
+    <div class="footer-col">
+      <h5>Product</h5>
+      <a href="#problem">The Problem</a>
+      <a href="#bonus-types">Bonus Types</a>
+      <a href="#how">How It Works</a>
+      <a href="#features">Platform</a>
+      <a href="#packages">Packages</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#services">Services</a>
+      <a href="#recipient">For Recipients</a>
+      <a href="#team">Team</a>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <a href="#">About</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2025 BonusBridge · thebonusbridge.com</span>
+    <span>Built for the teams who take bonus administration seriously.</span>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+/* ── MODAL ── */
+var selPkgVal = '';
+
+function openModal(pkg) {
+  document.getElementById('overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('mForm').classList.remove('hidden');
+  document.getElementById('mSuccess').classList.add('hidden');
+  if (pkg) {
+    document.querySelectorAll('.pkg-sel-opt').forEach(function(b) {
+      b.classList.remove('on');
+      var tier = b.querySelector('.pso-tier');
+      if (tier && tier.textContent === pkg) { b.classList.add('on'); selPkgVal = pkg; }
+    });
+    document.getElementById('mTitle').textContent =
+      pkg === 'Not sure yet' ? "Let's find the right fit." :
+      pkg === 'Collections Kickstart' ? "Let's talk about Collections Kickstart." :
+      "Let's talk about " + pkg + ".";
+  } else {
+    document.getElementById('mTitle').textContent = "Let's talk about your bonus program.";
+  }
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function handleOvClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+function selPkg(btn, pkg) {
+  document.querySelectorAll('.pkg-sel-opt').forEach(function(b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+  selPkgVal = pkg;
+  document.getElementById('mTitle').textContent =
+    pkg === 'Not sure yet' ? "Let's find the right fit." : "Let's talk about " + pkg + ".";
+}
+
+function submitForm() {
+  var fn    = document.getElementById('fn').value.trim();
+  var ln    = document.getElementById('ln').value.trim();
+  var em    = document.getElementById('em').value.trim();
+  var org   = document.getElementById('org').value.trim();
+  var ttl   = document.getElementById('ttl').value.trim();
+  var fn2   = document.getElementById('fn2').value;
+  var notes = document.getElementById('notes').value.trim();
+
+  if (!fn || !ln || !em || !org || !ttl) { alert('Please fill in all required fields.'); return; }
+  if (!em.includes('@')) { alert('Please enter a valid work email.'); return; }
+
+  var btn = document.querySelector('.form-submit');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  fetch('https://formspree.io/f/mjgprbwl', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      name: fn + ' ' + ln,
+      email: em,
+      organization: org,
+      title: ttl,
+      function: fn2,
+      package: selPkgVal || 'Not selected',
+      notes: notes,
+      _replyto: em,
+      _subject: 'BonusBridge inquiry — ' + org + (selPkgVal ? ' (' + selPkgVal + ')' : ''),
+    })
+  })
+  .then(function(res) {
+    if (res.ok) {
+      document.getElementById('mForm').classList.add('hidden');
+      document.getElementById('mSuccess').classList.remove('hidden');
+      setTimeout(function() { closeModal(); }, 3000);
+    } else { throw new Error('fail'); }
+  })
+  .catch(function() {
+    btn.textContent = 'Get Started →';
+    btn.disabled = false;
+    alert('Something went wrong. Please email us at thebonusbridgeteam@gmail.com');
+  });
+}
+
+/* ── HAMBURGER ── */
+var menuOpen = false;
+
+function toggleMenu() {
+  menuOpen = !menuOpen;
+  document.getElementById('mobileMenu').classList.toggle('hidden', !menuOpen);
+  document.getElementById('hamburger').classList.toggle('open', menuOpen);
+  document.body.style.overflow = menuOpen ? 'hidden' : '';
+}
+
+function navTo(sectionId) {
+  menuOpen = false;
+  document.getElementById('mobileMenu').classList.add('hidden');
+  document.getElementById('hamburger').classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(function() {
+    var el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 10);
+}
+
+document.getElementById('mobileMenu').addEventListener('click', function(e) {
+  if (e.target === this) toggleMenu();
+});
+
+/* ── SCROLL SPY ── */
+var spySections = ['problem','bonus-types','how','features','packages','pricing','services','recipient','team'];
+var spyEl = document.getElementById('scrollSpy');
+var spyLinks = document.querySelectorAll('.spy-link');
+
+var heroObs = new IntersectionObserver(function(entries) {
+  spyEl.classList.toggle('visible', !entries[0].isIntersecting);
+}, { threshold: 0.1 });
+heroObs.observe(document.querySelector('.hero'));
+
+var visMap = {};
+var clickedSection = '';
+var clickTimer = null;
+
+function updateActiveLink() {
+  if (clickedSection) return;
+  var maxR = 0, activeId = '';
+  Object.keys(visMap).forEach(function(id) {
+    if (visMap[id] > maxR) { maxR = visMap[id]; activeId = id; }
+  });
+  spyLinks.forEach(function(link) {
+    link.classList.toggle('active', link.getAttribute('data-section') === activeId);
+  });
+}
+
+var sectionObs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) { visMap[entry.target.id] = entry.intersectionRatio; });
+  updateActiveLink();
+}, {
+  rootMargin: '-64px 0px -40% 0px',
+  threshold: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
+});
+
+spySections.forEach(function(id) {
+  var el = document.getElementById(id);
+  if (el) { visMap[id] = 0; sectionObs.observe(el); }
+});
+
+spyLinks.forEach(function(link) {
+  link.addEventListener('click', function() {
+    var id = link.getAttribute('data-section');
+    clickedSection = id;
+    spyLinks.forEach(function(l) { l.classList.toggle('active', l.getAttribute('data-section') === id); });
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(function() { clickedSection = ''; updateActiveLink(); }, 900);
+  });
+});
+
+document.querySelectorAll('a[href^="#"]').forEach(function(el) {
+  var href = el.getAttribute('href');
+  var id = href.replace('#', '');
+  if (!spySections.includes(id)) return;
+  el.addEventListener('click', function() {
+    clickedSection = id;
+    spyLinks.forEach(function(l) { l.classList.toggle('active', l.getAttribute('data-section') === id); });
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(function() { clickedSection = ''; updateActiveLink(); }, 900);
+  });
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal(); closeLoginModal(); if (menuOpen) toggleMenu(); }
+});
+
+/* ── PRICING CALCULATOR ── */
+var BB_PKGS = {
+  manage:  { label: 'Manage',  note: 18, other: 9  },
+  notify:  { label: 'Notify',  note: 30, other: 16 },
+  execute: { label: 'Execute', note: 45, other: 24 }
+};
+var bbPkg = 'manage';
+
+function bbSelectPkg(el) {
+  document.querySelectorAll('.bb-pkg').forEach(function(e) {
+    e.classList.remove('selected');
+    e.style.borderColor = 'var(--g200)';
+    e.style.background  = 'var(--cream)';
+    e.querySelector('div:first-child').style.color = 'var(--g400)';
+  });
+  el.classList.add('selected');
+  el.style.borderColor = 'var(--indigo)';
+  el.style.background  = '#eef2ff';
+  el.querySelector('div:first-child').style.color = 'var(--indigo)';
+  bbPkg = el.dataset.pkg;
+  bbCalc();
+}
+
+function bbAdj(id, delta) {
+  var el = document.getElementById(id);
+  el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
+  bbCalc();
+}
+
+function bbFmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+function bbCalc() {
+  var pkg      = BB_PKGS[bbPkg];
+  var noteQty  = Math.max(0, parseInt(document.getElementById('bbNoteQty').value)  || 0);
+  var otherQty = Math.max(0, parseInt(document.getElementById('bbOtherQty').value) || 0);
+  var total    = noteQty + otherQty;
+
+  var noteSub  = pkg.note  * noteQty;
+  var otherSub = pkg.other * otherQty;
+  var subtotal = noteSub + otherSub;
+
+  var disc = 0, discLabel = '';
+  if (total >= 50)      { disc = 0.20; discLabel = '20% volume discount'; }
+  else if (total >= 25) { disc = 0.15; discLabel = '15% volume discount'; }
+  else if (total >= 10) { disc = 0.10; discLabel = '10% volume discount'; }
+
+  var monthly = subtotal > 0 ? Math.max(subtotal * (1 - disc), 99) : 0;
+  var annual  = monthly * 12;
+
+  document.getElementById('bbPkgLabel').textContent  = 'BonusBridge ' + pkg.label;
+  document.getElementById('bbMonthly').textContent   = monthly > 0 ? bbFmt(monthly) : '—';
+  document.getElementById('bbAnnualOut').textContent = monthly > 0 ? bbFmt(annual) + '/year' : '';
+
+  var noteRow = document.getElementById('bbNoteRow');
+  if (noteQty > 0) {
+    noteRow.style.display = 'flex';
+    document.getElementById('bbNoteOut').textContent    = bbFmt(noteSub) + '/mo';
+    document.getElementById('bbNoteDetail').textContent = noteQty + ' × ' + bbFmt(pkg.note) + '/mo';
+  } else { noteRow.style.display = 'none'; }
+
+  var otherRow = document.getElementById('bbOtherRow');
+  if (otherQty > 0) {
+    otherRow.style.display = 'flex';
+    document.getElementById('bbOtherOut').textContent    = bbFmt(otherSub) + '/mo';
+    document.getElementById('bbOtherDetail').textContent = otherQty + ' × ' + bbFmt(pkg.other) + '/mo';
+  } else { otherRow.style.display = 'none'; }
+
+  var discRow = document.getElementById('bbDiscRow');
+  if (disc > 0 && subtotal > 0) {
+    discRow.style.display = 'flex';
+    document.getElementById('bbDiscLabel').textContent = discLabel;
+    document.getElementById('bbDiscOut').textContent   = '−' + bbFmt(subtotal * disc) + '/mo';
+  } else { discRow.style.display = 'none'; }
+
+  // ROI — uses user-input averages
+  var noteAvg  = Math.max(0, parseFloat(document.getElementById('bbNoteAvg').value)  || 0);
+  var otherAvg = Math.max(0, parseFloat(document.getElementById('bbOtherAvg').value) || 0);
+  var portfolio = (noteAvg * noteQty) + (otherAvg * otherQty);
+  var roiEl = document.getElementById('bbRoi');
+
+  if (portfolio > 0 && annual > 0 && total > 0) {
+    roiEl.style.display = 'block';
+
+    // Avg value across all agreements
+    var blendedAvg = portfolio / total;
+
+    // How many agreements would need to be fully recovered to cover annual cost
+    var breakEvenAgreements = annual / blendedAvg;
+
+    // Express that as % of total volume
+    var breakEvenPct = (breakEvenAgreements / total * 100).toFixed(2);
+
+    // Round break-even to one decimal for readability
+    var breakEvenDisplay = breakEvenAgreements < 1
+      ? 'less than 1'
+      : breakEvenAgreements.toFixed(1);
+
+    document.getElementById('bbRoiText').innerHTML =
+      'BonusBridge costs <strong style="color:white;">' + bbFmt(annual) + '/year</strong> to protect ' +
+      '<strong style="color:white;">' + bbFmt(portfolio) + '</strong> in outstanding agreements. ' +
+      'That\'s the equivalent of recovering just <strong style="color:#6ee7b7;">' + breakEvenDisplay + '</strong> out of your ' +
+      '<strong style="color:white;">' + total + '</strong> agreements — ' +
+      '<strong style="color:#a5b4fc;">' + breakEvenPct + '%</strong> of your outstanding volume.';
+  } else {
+    roiEl.style.display = 'none';
+  }
+}
+
+bbCalc();
+
+/* ── LOGIN MODAL ── */
+function openLoginModal() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeLoginModal() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+</script>
+</body>
 </html>
