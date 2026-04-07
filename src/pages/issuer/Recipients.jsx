@@ -474,11 +474,12 @@ export default function Recipients() {
 
   async function sendInvite(r) {
     setInviting(r.id)
-    const { error } = await supabase.functions.invoke('invite-recipient', {
+    const { data, error } = await supabase.functions.invoke('invite-recipient', {
       body: { recipient_id: r.id }
     })
+    console.log('Invite result:', { data, error })
     if (error) {
-      alert(`Failed to send invite: ${error.message}`)
+      alert(`Failed to send invite: ${error.message}\n\nDetails: ${JSON.stringify(error)}`)
     } else {
       alert(`Invite sent to ${r.email}`)
     }
