@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import AppShell from './pages/AppShell'
 import IssuerOverview from './pages/issuer/Overview'
 import Agreements from './pages/issuer/Agreements'
@@ -30,6 +31,7 @@ export default function App() {
           <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Root → role-based redirect */}
           <Route path="/" element={<ProtectedRoute><RoleRedirect /></ProtectedRoute>} />
