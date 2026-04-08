@@ -546,6 +546,85 @@ function CustomBonusForm({ form, set }) {
   )
 }
 
+// ── US States ──────────────────────────────────────────────
+const US_STATES = [
+  {value:'AL',label:'Alabama'},{value:'AK',label:'Alaska'},{value:'AZ',label:'Arizona'},
+  {value:'AR',label:'Arkansas'},{value:'CA',label:'California'},{value:'CO',label:'Colorado'},
+  {value:'CT',label:'Connecticut'},{value:'DE',label:'Delaware'},{value:'FL',label:'Florida'},
+  {value:'GA',label:'Georgia'},{value:'HI',label:'Hawaii'},{value:'ID',label:'Idaho'},
+  {value:'IL',label:'Illinois'},{value:'IN',label:'Indiana'},{value:'IA',label:'Iowa'},
+  {value:'KS',label:'Kansas'},{value:'KY',label:'Kentucky'},{value:'LA',label:'Louisiana'},
+  {value:'ME',label:'Maine'},{value:'MD',label:'Maryland'},{value:'MA',label:'Massachusetts'},
+  {value:'MI',label:'Michigan'},{value:'MN',label:'Minnesota'},{value:'MS',label:'Mississippi'},
+  {value:'MO',label:'Missouri'},{value:'MT',label:'Montana'},{value:'NE',label:'Nebraska'},
+  {value:'NV',label:'Nevada'},{value:'NH',label:'New Hampshire'},{value:'NJ',label:'New Jersey'},
+  {value:'NM',label:'New Mexico'},{value:'NY',label:'New York'},{value:'NC',label:'North Carolina'},
+  {value:'ND',label:'North Dakota'},{value:'OH',label:'Ohio'},{value:'OK',label:'Oklahoma'},
+  {value:'OR',label:'Oregon'},{value:'PA',label:'Pennsylvania'},{value:'RI',label:'Rhode Island'},
+  {value:'SC',label:'South Carolina'},{value:'SD',label:'South Dakota'},{value:'TN',label:'Tennessee'},
+  {value:'TX',label:'Texas'},{value:'UT',label:'Utah'},{value:'VT',label:'Vermont'},
+  {value:'VA',label:'Virginia'},{value:'WA',label:'Washington'},{value:'WV',label:'West Virginia'},
+  {value:'WI',label:'Wisconsin'},{value:'WY',label:'Wyoming'},
+]
+
+// ── State law banner ───────────────────────────────────────
+function StateLawBanner({ rules, acknowledged, onAcknowledge }) {
+  const [expanded, setExpanded] = useState({})
+  if (!rules || rules.length === 0) return null
+
+  const LEVEL_STYLES = {
+    warning: { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-400',    icon: '⚠️', label: 'Warning' },
+    caution: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚡', label: 'Caution' },
+    info:    { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   text: 'text-blue-400',   icon: 'ℹ️', label: 'Notice'  },
+  }
+
+  const topLevel = rules.reduce((top, r) => {
+    const order = { warning: 0, caution: 1, info: 2 }
+    return order[r.rule_level] < order[top] ? r.rule_level : top
+  }, 'info')
+
+  const style = LEVEL_STYLES[topLevel]
+
+  return (
+    <div className={`${style.bg} border ${style.border} rounded-xl p-4 flex flex-col gap-3`}>
+      <div className="flex items-center gap-2">
+        <span className="text-base">{style.icon}</span>
+        <p className={`text-xs font-bold uppercase tracking-widest ${style.text}`}>
+          State Law {style.label}
+        </p>
+      </div>
+
+      {rules.map((rule, i) => (
+        <div key={i} className="flex flex-col gap-1">
+          <p className="text-slate-200 text-sm font-medium">{rule.rule_summary}</p>
+          {expanded[i] && (
+            <div className="mt-1">
+              <p className="text-slate-400 text-xs leading-relaxed">{rule.rule_detail}</p>
+              {rule.source && <p className="text-slate-500 text-xs mt-1">Source: {rule.source}</p>}
+            </div>
+          )}
+          <button type="button" onClick={() => setExpanded(e => ({ ...e, [i]: !e[i] }))}
+            className={`text-xs font-medium ${style.text} hover:opacity-80 transition text-left`}>
+            {expanded[i] ? 'Show less ▲' : 'Learn more ▼'}
+          </button>
+        </div>
+      ))}
+
+      <label className="flex items-start gap-3 cursor-pointer pt-1 border-t border-white/10">
+        <div className="relative mt-0.5 shrink-0">
+          <input type="checkbox" className="sr-only" checked={!!acknowledged} onChange={e => onAcknowledge(e.target.checked)} />
+          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition ${acknowledged ? 'bg-brand-600 border-brand-600' : 'border-slate-500 bg-slate-800'}`}>
+            {acknowledged && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="1 5 4 8 9 2"/></svg>}
+          </div>
+        </div>
+        <p className="text-slate-300 text-xs leading-relaxed">
+          I have reviewed this state law notice and understand it may affect this agreement. I will consult legal counsel as appropriate.
+        </p>
+      </label>
+    </div>
+  )
+}
+
 // ── Agreement drawer ───────────────────────────────────────
 const EMPTY_FORM = {
   bonus_type: 'signing_bonus', recipient_id: '', agreement_number: '',
@@ -554,6 +633,7 @@ const EMPTY_FORM = {
   execution_date: '', effective_date: '', projected_end_date: '',
   disbursement_date: '', pn_dates_differ: false,
   status: 'draft', notes: '', custom_terms: {},
+  recipient_state: '',
   elig_min_fte: '', elig_benefits_eligible: false,
   elig_maintain_role: false, elig_licensure_required: false, elig_notes: '',
 }
@@ -571,14 +651,36 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState(null)
+  const [stateRules, setStateRules]           = useState([])
+  const [stateLawAcknowledged, setStateLawAck] = useState(false)
   const isEdit              = !!agreement
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
+
+  // Load state rules whenever state or bonus type changes
+  useEffect(() => {
+    async function loadRules() {
+      if (!form.recipient_state || !form.bonus_type) { setStateRules([]); return }
+      const { data } = await supabase
+        .from('state_bonus_rules')
+        .select('*')
+        .or(`state_code.eq.${form.recipient_state},state_code.eq.ALL`)
+        .or(`bonus_type.eq.${form.bonus_type},bonus_type.eq.all`)
+        .order('rule_level')
+      setStateRules(data ?? [])
+      setStateLawAck(false)
+    }
+    loadRules()
+  }, [form.recipient_state, form.bonus_type])
 
   async function handleSave(e) {
     e.preventDefault()
     if (!form.recipient_id)   { setError('Please select a recipient.'); return }
     if (!form.bonus_type)     { setError('Please select a bonus type.'); return }
+    if (stateRules.length > 0 && !stateLawAcknowledged) {
+      setError('Please review and acknowledge the state law notice before saving.')
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -618,6 +720,7 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
       projected_end_date:           form.projected_end_date || null,
       status:                       form.status,
       notes:                        form.notes || null,
+      recipient_state:              form.recipient_state || null,
       eligibility_criteria,
       custom_terms,
     }
@@ -701,6 +804,24 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
               <SelectField label="Status" value={form.status}
                 onChange={v => set('status', v)} options={AGREEMENT_STATUSES} />
             </div>
+
+            <SelectField
+              label="Recipient Work State"
+              required
+              value={form.recipient_state}
+              onChange={v => set('recipient_state', v)}
+              options={US_STATES}
+              hint="State where the recipient will be employed — triggers state law review"
+            />
+
+            {/* State law banner */}
+            {stateRules.length > 0 && (
+              <StateLawBanner
+                rules={stateRules}
+                acknowledged={stateLawAcknowledged}
+                onAcknowledge={setStateLawAck}
+              />
+            )}
 
             {/* Type-specific form */}
             {form.bonus_type === 'signing_bonus'     && <SigningBonusForm     form={form} set={set} />}
@@ -1175,6 +1296,7 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
               <Row label="Effective Date"       value={fmtDate(a.effective_date)} />
               <Row label="Forgiveness Start"    value={fmtDate(a.forgiveness_start_date)} />
               <Row label="Projected End"        value={fmtDate(a.projected_end_date)} />
+              {a.recipient_state && <Row label="Work State" value={US_STATES.find(s => s.value === a.recipient_state)?.label ?? a.recipient_state} />}
             </div>
           </Section>
 
