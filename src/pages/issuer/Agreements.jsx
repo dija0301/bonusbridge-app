@@ -899,7 +899,7 @@ export default function Agreements() {
     const [agRes, recRes] = await Promise.all([
       supabase
         .from('agreements')
-        .select('*, recipients(id, first_name, last_name, title)')
+        .select('*, recipients(id, first_name, last_name, title, first_login_at)')
         .eq('issuer_id', issuerId)
         .order('created_at', { ascending: false }),
       supabase
@@ -1301,24 +1301,78 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           </Section>
 
           {/* Recipient acknowledgment */}
-          <Section title="Recipient Acknowledgment">
-            {a.acknowledged_at ? (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2 8 6 12 14 4"/></svg>
-                  <p className="text-emerald-400 text-xs font-semibold">Acknowledged</p>
+          <Section title="Recipient Review Period">
+            {(() => {
+              const execDate      = a.execution_date ? new Date(a.execution_date + 'T00:00:00') : null
+              const firstLogin    = a.recipients?.first_login_at ? new Date(a.recipients.first_login_at) : null
+              const acknowledged  = a.acknowledged_at ? new Date(a.acknowledged_at) : null
+
+              function bizDays(start, end) {
+                if (!start || !end) return null
+                let count = 0
+                const cur = new Date(start)
+                cur.setDate(cur.getDate() + 1)
+                while (cur <= end) {
+                  const day = cur.getDay()
+                  if (day !== 0 && day !== 6) count++
+                  cur.setDate(cur.getDate() + 1)
+                }
+                return count
+              }
+
+              const daysToLogin  = bizDays(execDate, firstLogin)
+              const daysToAck    = bizDays(execDate, acknowledged)
+
+              return (
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-slate-500 text-xs mb-0.5">Execution Date</p>
+                      <p className="text-slate-200 text-sm">{execDate ? fmtDate(a.execution_date) : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs mb-0.5">First Portal Access</p>
+                      {firstLogin
+                        ? <p className="text-slate-200 text-sm">{firstLogin.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        : <p className="text-slate-600 text-sm italic">Not yet accessed</p>
+                      }
+                    </div>
+                    {daysToLogin !== null && (
+                      <div>
+                        <p className="text-slate-500 text-xs mb-0.5">Business Days to First Access</p>
+                        <p className="text-slate-200 text-sm font-semibold">{daysToLogin} business day{daysToLogin !== 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                    {daysToAck !== null && (
+                      <div>
+                        <p className="text-slate-500 text-xs mb-0.5">Business Days to Acknowledgment</p>
+                        <p className="text-slate-200 text-sm font-semibold">{daysToAck} business day{daysToAck !== 1 ? 's' : ''}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {acknowledged ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2 8 6 12 14 4"/></svg>
+                        <p className="text-emerald-400 text-xs font-semibold">Acknowledged</p>
+                      </div>
+                      <p className="text-slate-300 text-sm">
+                        {acknowledged.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {' at '}
+                        {acknowledged.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
+                      <p className="text-slate-500 text-sm italic">Not yet acknowledged by recipient</p>
+                    </div>
+                  )}
+
+                  <p className="text-slate-600 text-xs">Business days calculated Mon–Fri. Federal holidays not excluded.</p>
                 </div>
-                <p className="text-slate-300 text-sm">
-                  {new Date(a.acknowledged_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  {' at '}
-                  {new Date(a.acknowledged_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
-                <p className="text-slate-500 text-sm italic">Not yet acknowledged by recipient</p>
-              </div>
-            )}
+              )
+            })()}
           </Section>
 
           {/* Eligibility */}
