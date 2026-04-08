@@ -39,7 +39,7 @@ function Step({ number, label, active, complete }) {
 
 export default function RecipientOnboarding({ onComplete }) {
   const { session } = useAuth()
-  const [step, setStep]             = useState(1) // 1=review, 2=contact, 3=acknowledge
+  const [step, setStep]             = useState(1) // 1=review, 2=contact, 3=acknowledge, 4=password
   const [recipient, setRecipient]   = useState(null)
   const [agreements, setAgreements] = useState([])
   const [loading, setLoading]       = useState(true)
@@ -54,6 +54,11 @@ export default function RecipientOnboarding({ onComplete }) {
 
   // Acknowledgment
   const [acknowledged, setAcknowledged] = useState(false)
+
+  // Password
+  const [password, setPassword]     = useState('')
+  const [confirmPw, setConfirmPw]   = useState('')
+  const [pwError, setPwError]       = useState(null)
 
   useEffect(() => { if (session?.user?.id) load() }, [session])
 
@@ -118,7 +123,6 @@ export default function RecipientOnboarding({ onComplete }) {
         status: ag.status === 'onboarding' ? 'active' : ag.status,
       }).eq('id', ag.id)
 
-      // Log acknowledgment event
       await supabase.from('recipient_events').insert({
         recipient_id: recipient.id,
         issuer_id:    recipient.issuer_id,
@@ -136,6 +140,20 @@ export default function RecipientOnboarding({ onComplete }) {
     await supabase.from('recipients').update(loginUpdates).eq('id', recipient.id)
 
     setSaving(false)
+    setStep(4) // Go to password setup
+  }
+
+  async function handleSetPassword(e) {
+    e.preventDefault()
+    setPwError(null)
+    if (password.length < 8) { setPwError('Password must be at least 8 characters.'); return }
+    if (password !== confirmPw) { setPwError('Passwords do not match.'); return }
+
+    setSaving(true)
+    const { error } = await supabase.auth.updateUser({ password })
+    setSaving(false)
+
+    if (error) { setPwError(error.message); return }
     onComplete()
   }
 
@@ -194,11 +212,13 @@ export default function RecipientOnboarding({ onComplete }) {
 
         {/* Progress steps */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Step number={1} label="Review Agreement"    active={step === 1} complete={step > 1} />
+          <Step number={1} label="Review Agreement" active={step === 1} complete={step > 1} />
           <div className="flex-1 h-px bg-slate-800 hidden sm:block" />
-          <Step number={2} label="Confirm Contact"     active={step === 2} complete={step > 2} />
+          <Step number={2} label="Confirm Contact"  active={step === 2} complete={step > 2} />
           <div className="flex-1 h-px bg-slate-800 hidden sm:block" />
-          <Step number={3} label="Acknowledge"         active={step === 3} complete={false} />
+          <Step number={3} label="Acknowledge"      active={step === 3} complete={step > 3} />
+          <div className="flex-1 h-px bg-slate-800 hidden sm:block" />
+          <Step number={4} label="Set Password"     active={step === 4} complete={false} />
         </div>
 
         {/* Step 1 — Review agreements */}
@@ -301,6 +321,39 @@ export default function RecipientOnboarding({ onComplete }) {
                 className="flex-1 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white font-semibold text-sm transition">
                 {saving ? 'Recording…' : 'Acknowledge and Continue'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Set password */}
+        {step === 4 && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-white font-semibold mb-1">Set Your Password</h3>
+              <p className="text-slate-400 text-sm mb-6">
+                Create a password so you can log in to your portal directly in the future. You can always use the magic link from an invite email as an alternative.
+              </p>
+
+              <form onSubmit={handleSetPassword} className="flex flex-col gap-4">
+                <ContactField label="Password" type="password" value={password}
+                  onChange={v => setPassword(v)} placeholder="At least 8 characters" />
+                <ContactField label="Confirm Password" type="password" value={confirmPw}
+                  onChange={v => setConfirmPw(v)} placeholder="Repeat your password" />
+
+                {pwError && (
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-3.5 py-2.5">{pwError}</div>
+                )}
+
+                <button type="submit" disabled={saving}
+                  className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-60 text-white font-semibold text-sm transition">
+                  {saving ? 'Setting password…' : 'Set Password and Enter Portal'}
+                </button>
+
+                <button type="button" onClick={onComplete}
+                  className="text-slate-500 hover:text-slate-300 text-sm text-center transition">
+                  Skip for now — I'll set a password later
+                </button>
+              </form>
             </div>
           </div>
         )}
