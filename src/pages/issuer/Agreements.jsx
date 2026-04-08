@@ -959,7 +959,12 @@ export default function Agreements() {
 function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const fmt     = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
   const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
+  const fmtShort = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
   const elig    = a.eligibility_criteria ?? {}
+
+  const [schedule, setSchedule]         = useState(null)
+  const [schedLoading, setSchedLoading] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
@@ -969,6 +974,19 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const isStarting  = a.bonus_type === 'starting_bonus'
   const isRetention = a.bonus_type === 'retention_bonus'
   const isPerf      = a.bonus_type === 'performance_bonus'
+
+  async function loadSchedule() {
+    if (schedule) { setShowSchedule(s => !s); return }
+    setSchedLoading(true)
+    setShowSchedule(true)
+    const { data } = await supabase
+      .from('amortization_schedule')
+      .select('period_number, period_start_date, beginning_balance, interest_amount, forgiveness_amount, imputed_income, ending_balance, is_processed')
+      .eq('agreement_id', a.id)
+      .order('period_number')
+    setSchedule(data ?? [])
+    setSchedLoading(false)
+  }
 
   function Row({ label, value }) {
     return value ? (
@@ -1057,6 +1075,66 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
               {a.forgiveness_amount_per_period && <Row label="Per Period" value={fmt(a.forgiveness_amount_per_period)} />}
             </div>
           </Section>
+
+          {/* Amortization schedule */}
+          {(isPN || isStarting) && (
+            <Section title="Forgiveness Schedule">
+              <button onClick={loadSchedule}
+                className="flex items-center gap-2 text-brand-400 hover:text-brand-300 text-xs font-medium transition mb-2">
+                {showSchedule ? '▲ Hide Schedule' : '▼ View Full Schedule'}
+              </button>
+              {showSchedule && (
+                schedLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="w-5 h-5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : schedule && schedule.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-700 mt-2">
+                    <table className="w-full text-xs min-w-[500px]">
+                      <thead>
+                        <tr className="border-b border-slate-700 text-slate-500 uppercase tracking-wide">
+                          <th className="text-left px-3 py-2 font-medium">#</th>
+                          <th className="text-left px-3 py-2 font-medium">Date</th>
+                          <th className="text-right px-3 py-2 font-medium">Opening</th>
+                          <th className="text-right px-3 py-2 font-medium">Principal</th>
+                          <th className="text-right px-3 py-2 font-medium">Interest</th>
+                          <th className="text-right px-3 py-2 font-medium">Total</th>
+                          <th className="text-right px-3 py-2 font-medium">Closing</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {schedule.map(row => (
+                          <tr key={row.period_number} className={row.is_processed ? 'opacity-50' : ''}>
+                            <td className="px-3 py-2 text-slate-400">
+                              {row.period_number}
+                              {row.is_processed && <span className="ml-1 text-emerald-500">✓</span>}
+                            </td>
+                            <td className="px-3 py-2 text-slate-300">{fmtShort(row.period_start_date)}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.beginning_balance)}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.forgiveness_amount)}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.interest_amount)}</td>
+                            <td className="px-3 py-2 text-right text-brand-400 font-mono font-semibold">{fmt(row.imputed_income)}</td>
+                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.ending_balance)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="border-t border-slate-700 bg-slate-800/40">
+                        <tr>
+                          <td colSpan={3} className="px-3 py-2 text-slate-400 text-xs font-semibold">Totals</td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold">{fmt(schedule.reduce((s, r) => s + parseFloat(r.forgiveness_amount), 0))}</td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold">{fmt(schedule.reduce((s, r) => s + parseFloat(r.interest_amount), 0))}</td>
+                          <td className="px-3 py-2 text-right text-brand-400 font-mono font-semibold">{fmt(schedule.reduce((s, r) => s + parseFloat(r.imputed_income), 0))}</td>
+                          <td className="px-3 py-2" />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-slate-600 text-xs italic mt-2">No schedule generated yet. Save the agreement to generate.</p>
+                )
+              )}
+            </Section>
+          )}
 
           {/* Retention payments */}
           {isRetention && a.custom_terms?.installments?.length > 0 && (

@@ -110,7 +110,27 @@ function BalanceEstimator({ agreement }) {
 
 // ── Agreement card ─────────────────────────────────────────
 function AgreementCard({ agreement }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded]   = useState(false)
+  const [schedule, setSchedule]   = useState(null)
+  const [schedLoading, setSchedLoading] = useState(false)
+
+  async function loadSchedule() {
+    if (schedule) return // already loaded
+    setSchedLoading(true)
+    const { data } = await supabase
+      .from('amortization_schedule')
+      .select('period_number, period_start_date, beginning_balance, interest_amount, forgiveness_amount, imputed_income, ending_balance, is_processed')
+      .eq('agreement_id', agreement.id)
+      .order('period_number')
+    setSchedule(data ?? [])
+    setSchedLoading(false)
+  }
+
+  function handleExpand() {
+    const newExpanded = !expanded
+    setExpanded(newExpanded)
+    if (newExpanded && (isPN || isStarting)) loadSchedule()
+  }
   const principal    = parseFloat(agreement.principal_amount) || 0
   const outstanding  = parseFloat(agreement.outstanding_balance) ?? principal
   const forgiven     = principal - outstanding
@@ -211,9 +231,9 @@ function AgreementCard({ agreement }) {
 
       {/* Expandable details */}
       <div className="border-t border-white/8">
-        <button onClick={() => setExpanded(e => !e)}
+        <button onClick={handleExpand}
           className="w-full px-6 py-3 flex items-center justify-between text-slate-400 hover:text-white text-sm transition">
-          <span>Agreement Details and Eligibility</span>
+          <span>Agreement Details, Eligibility and Schedule</span>
           <span className="text-xs">{expanded ? '▲' : '▼'}</span>
         </button>
 
@@ -241,6 +261,74 @@ function AgreementCard({ agreement }) {
                   {elig.min_fte            && <EligPill label={`Min ${Math.round(elig.min_fte * 100)}% FTE`} />}
                 </div>
                 {elig.notes && <p className="text-slate-400 text-sm leading-relaxed">{elig.notes}</p>}
+              </div>
+            )}
+
+            {/* Amortization schedule */}
+            {(isPN || isStarting) && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Forgiveness Schedule</p>
+                <p className="text-slate-500 text-xs mb-3">Full period-by-period breakdown. Total forgiven each period (principal + interest) is reported to payroll as taxable income.</p>
+                {schedLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="w-5 h-5 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : schedule && schedule.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl border border-slate-700">
+                    <table className="w-full text-xs min-w-[520px]">
+                      <thead>
+                        <tr className="border-b border-slate-700 text-slate-500 uppercase tracking-wide">
+                          <th className="text-left px-3 py-2.5 font-medium">Period</th>
+                          <th className="text-left px-3 py-2.5 font-medium">Date</th>
+                          <th className="text-right px-3 py-2.5 font-medium">Opening Balance</th>
+                          <th className="text-right px-3 py-2.5 font-medium">Forgiven Principal</th>
+                          <th className="text-right px-3 py-2.5 font-medium">Forgiven Interest</th>
+                          <th className="text-right px-3 py-2.5 font-medium">Total Forgiven</th>
+                          <th className="text-right px-3 py-2.5 font-medium">Closing Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {schedule.map(row => {
+                          const isProcessed = row.is_processed
+                          const today = new Date()
+                          const rowDate = new Date(row.period_start_date)
+                          const isCurrent = !isProcessed && rowDate <= today
+                          return (
+                            <tr key={row.period_number} className={`${isProcessed ? 'opacity-50' : ''} ${isCurrent ? 'bg-brand-500/5' : ''}`}>
+                              <td className="px-3 py-2 text-slate-400">
+                                {row.period_number}
+                                {isProcessed && <span className="ml-1 text-emerald-500">✓</span>}
+                              </td>
+                              <td className="px-3 py-2 text-slate-300">{fmtDateShort(row.period_start_date)}</td>
+                              <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.beginning_balance)}</td>
+                              <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.forgiveness_amount)}</td>
+                              <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.interest_amount)}</td>
+                              <td className="px-3 py-2 text-right text-brand-400 font-mono font-semibold">{fmt(row.imputed_income)}</td>
+                              <td className="px-3 py-2 text-right text-slate-300 font-mono">{fmt(row.ending_balance)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                      <tfoot className="border-t border-slate-700 bg-slate-800/40">
+                        <tr>
+                          <td colSpan={3} className="px-3 py-2 text-slate-400 text-xs font-semibold">Totals</td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold">
+                            {fmt(schedule.reduce((s, r) => s + parseFloat(r.forgiveness_amount), 0))}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-300 font-mono font-semibold">
+                            {fmt(schedule.reduce((s, r) => s + parseFloat(r.interest_amount), 0))}
+                          </td>
+                          <td className="px-3 py-2 text-right text-brand-400 font-mono font-semibold">
+                            {fmt(schedule.reduce((s, r) => s + parseFloat(r.imputed_income), 0))}
+                          </td>
+                          <td className="px-3 py-2" />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-slate-600 text-sm italic">Schedule not yet generated. Contact your HR team.</p>
+                )}
               </div>
             )}
 
