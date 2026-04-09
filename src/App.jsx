@@ -10,6 +10,7 @@ import IssuerOverview from './pages/issuer/Overview'
 import Agreements from './pages/issuer/Agreements'
 import Recipients from './pages/issuer/Recipients'
 import Collections from './pages/issuer/Collections'
+// Collections page is now Departure Response
 import RecipientPortal from './pages/recipient/Portal'
 
 function RoleRedirect() {

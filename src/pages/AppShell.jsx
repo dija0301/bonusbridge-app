@@ -5,7 +5,7 @@ const ISSUER_NAV = [
   { to: '/issuer',             label: 'Overview',    icon: OverviewIcon },
   { to: '/issuer/agreements',  label: 'Agreements',  icon: AgreementsIcon },
   { to: '/issuer/recipients',  label: 'Recipients',  icon: RecipientsIcon },
-  { to: '/issuer/collections', label: 'Collections', icon: CollectionsIcon },
+  { to: '/issuer/collections', label: 'Departure Response', icon: CollectionsIcon },
 ]
 
 const RECIPIENT_NAV = [

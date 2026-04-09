@@ -892,6 +892,18 @@ export default function Agreements() {
   const [viewing, setViewing]       = useState(null)
   const [filter, setFilter]         = useState('active')
   const [search, setSearch]         = useState('')
+  const [sortCol, setSortCol]       = useState('effective_date')
+  const [sortDir, setSortDir]       = useState('desc')
+
+  function toggleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+  }
+
+  function sortIcon(col) {
+    if (sortCol !== col) return <span className="text-slate-600 ml-1">↕</span>
+    return <span className="text-brand-400 ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
 
   const load = useCallback(async () => {
     if (!issuerId) return
@@ -946,13 +958,23 @@ export default function Agreements() {
     return acc
   }, { all: agreements.length })
 
-  const filtered = agreements.filter(a => {
-    const matchFilter = filter === 'all' ? true : a.status === filter
-    const q           = search.toLowerCase()
-    const name        = `${a.recipients?.first_name ?? ''} ${a.recipients?.last_name ?? ''}`.toLowerCase()
-    const matchSearch = !q || name.includes(q) || a.agreement_number?.toLowerCase().includes(q)
-    return matchFilter && matchSearch
-  })
+  const filtered = agreements
+    .filter(a => {
+      const matchFilter = filter === 'all' ? true : a.status === filter
+      const q           = search.toLowerCase()
+      const name        = `${a.recipients?.first_name ?? ''} ${a.recipients?.last_name ?? ''}`.toLowerCase()
+      const matchSearch = !q || name.includes(q) || a.agreement_number?.toLowerCase().includes(q)
+      return matchFilter && matchSearch
+    })
+    .sort((a, b) => {
+      let av, bv
+      if (sortCol === 'recipient_name') {
+        av = `${a.recipients?.last_name ?? ''} ${a.recipients?.first_name ?? ''}`
+        bv = `${b.recipients?.last_name ?? ''} ${b.recipients?.first_name ?? ''}`
+      } else { av = a[sortCol] ?? ''; bv = b[sortCol] ?? '' }
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+      return sortDir === 'asc' ? av - bv : bv - av
+    })
 
   const bonusLabel = t => BONUS_TYPES.find(b => b.value === t)?.label ?? t
 
@@ -1014,12 +1036,12 @@ export default function Agreements() {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="text-slate-500 text-xs uppercase tracking-wide border-b border-slate-800">
-                  <th className="text-left px-5 py-3 font-medium">Recipient</th>
-                  <th className="text-left px-5 py-3 font-medium">Type</th>
-                  <th className="text-left px-5 py-3 font-medium">Principal</th>
-                  <th className="text-left px-5 py-3 font-medium">Outstanding</th>
-                  <th className="text-left px-5 py-3 font-medium">Effective</th>
-                  <th className="text-left px-5 py-3 font-medium">Status</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('recipient_name')}>Recipient{sortIcon('recipient_name')}</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('bonus_type')}>Type{sortIcon('bonus_type')}</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('principal_amount')}>Principal{sortIcon('principal_amount')}</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('outstanding_balance')}>Outstanding{sortIcon('outstanding_balance')}</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('effective_date')}>Effective{sortIcon('effective_date')}</th>
+                  <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 transition select-none" onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
                   <th className="text-right px-5 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
