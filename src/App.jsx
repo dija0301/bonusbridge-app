@@ -11,6 +11,7 @@ import Agreements from './pages/issuer/Agreements'
 import Recipients from './pages/issuer/Recipients'
 import Collections from './pages/issuer/Collections'
 // Collections page is now Departure Response
+import Settings from './pages/issuer/Settings'
 import RecipientPortal from './pages/recipient/Portal'
 
 function RoleRedirect() {
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="agreements"  element={<Agreements />} />
             <Route path="recipients"  element={<Recipients />} />
             <Route path="collections" element={<Collections />} />
+            <Route path="settings"    element={<Settings />} />
           </Route>
 
           {/* Recipient portal */}
