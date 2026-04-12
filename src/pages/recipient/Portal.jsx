@@ -479,26 +479,38 @@ export default function RecipientPortal() {
     setLoading(true)
     setError(null)
     try {
-      const { data: rec, error: recErr } = await supabase
-        .from('recipients').select('*').eq('user_id', session.user.id).single()
-      if (recErr) throw new Error('Could not find your recipient profile. Please contact your administrator.')
-      setRecipient(rec)
+      // Fetch ALL recipient records for this user (may span multiple orgs)
+      const { data: recs, error: recErr } = await supabase
+        .from('recipients').select('*').eq('user_id', session.user.id).order('created_at')
+      if (recErr || !recs?.length) throw new Error('Could not find your recipient profile. Please contact your administrator.')
 
-      // If onboarding not complete, show onboarding screen
-      if (!rec.onboarding_complete) {
+      // Use the first (oldest) recipient as primary for contact info display
+      const primaryRec = recs[0]
+      setRecipient(primaryRec)
+
+      // Check if ANY recipient record needs onboarding
+      const needsOnboarding = recs.some(r => !r.onboarding_complete)
+      if (needsOnboarding) {
         setShowOnboarding(true)
         setLoading(false)
         return
       }
 
-      // Log last login — only set first_login_at if not already set
-      const loginUpdates = { last_login_at: new Date().toISOString() }
-      if (!rec.first_login_at) loginUpdates.first_login_at = new Date().toISOString()
-      await supabase.from('recipients').update(loginUpdates).eq('id', rec.id)
-      await supabase.from('recipient_events').insert({ recipient_id: rec.id, issuer_id: rec.issuer_id, event_type: 'login' })
+      // Log last login on all recipient records
+      const now = new Date().toISOString()
+      for (const rec of recs) {
+        const loginUpdates = { last_login_at: now }
+        if (!rec.first_login_at) loginUpdates.first_login_at = now
+        await supabase.from('recipients').update(loginUpdates).eq('id', rec.id)
+        await supabase.from('recipient_events').insert({ recipient_id: rec.id, issuer_id: rec.issuer_id, event_type: 'login' })
+      }
 
+      // Fetch ALL agreements across all recipient records
+      const recipientIds = recs.map(r => r.id)
       const { data: ags, error: agErr } = await supabase
-        .from('agreements').select('*').eq('recipient_id', rec.id).order('created_at', { ascending: false })
+        .from('agreements').select('*')
+        .in('recipient_id', recipientIds)
+        .order('created_at', { ascending: false })
       if (agErr) throw agErr
       setAgreements(ags)
     } catch (e) {
