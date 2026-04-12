@@ -418,19 +418,73 @@ export default function Settings() {
             ]} />
         </SectionCard>
 
+        {/* ── DocuSign Integration ── */}
+        <SectionCard
+          title="DocuSign Integration"
+          description="Execute promissory notes digitally — pre-filled from agreement data and sent for signature">
+
+          {notif?.docusign_account_id && notif?.docusign_template_id ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg mb-2">
+              <svg className="w-4 h-4 text-emerald-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2 8 6 12 14 4"/></svg>
+              <p className="text-emerald-400 text-sm font-medium">DocuSign connected</p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg mb-2">
+              <svg className="w-4 h-4 text-slate-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>
+              <p className="text-slate-400 text-sm">Not connected — add your DocuSign credentials below to enable</p>
+            </div>
+          )}
+
+          <Field
+            label="DocuSign Account ID"
+            value={notif?.docusign_account_id}
+            onChange={v => setN('docusign_account_id', v)}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            hint="Found in DocuSign Admin → Apps and Keys" />
+
+          <Field
+            label="Default Template ID"
+            value={notif?.docusign_template_id}
+            onChange={v => setN('docusign_template_id', v)}
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            hint="The DocuSign template ID for your promissory note. Each bonus type can have its own template — contact BonusBridge to configure custom templates." />
+
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+            <p className="text-slate-300 text-sm font-medium mb-2">How document integration works</p>
+            <div className="flex flex-col gap-1.5">
+              {[
+                'BonusBridge pre-fills your promissory note template with agreement data',
+                'DocuSign sends the document to the recipient for electronic signature',
+                'Signed document is stored securely and linked to the agreement record',
+                'BonusBridge invite is sent after signing — recipient completes onboarding',
+                'Full audit trail: signed document + acknowledgment timestamp + review period',
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-2 text-slate-400 text-xs">
+                  <span className="text-brand-400 mt-0.5 shrink-0">{i + 1}.</span>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-slate-500 text-xs">
+            Need help setting up your document templates? Document integration and template mapping is included in the Portfolio Kickstart service. <a href="mailto:thebonusbridgeteam@gmail.com" className="text-brand-400 hover:text-brand-300">Contact us →</a>
+          </p>
+        </SectionCard>
+
         {/* ── Integrations — Coming Soon ── */}
         <SectionCard
-          title="Integrations"
+          title="Additional Integrations"
           description="Connect BonusBridge with your existing HR and payroll systems"
           locked
           lockReason="Coming Soon">
           <ComingSoonContent
             description="Seamlessly connect with the tools your organization already uses."
             features={[
-              'DocuSign — execute promissory notes digitally',
               'Payroll export — formatted for ADP, Paychex, Workday',
-              'HRIS sync — auto-import recipient data',
+              'HRIS sync — auto-import recipient data from your HR system',
               'SSO — single sign-on via your identity provider',
+              'Slack notifications — alert HR team on key agreement events',
             ]} />
         </SectionCard>
 

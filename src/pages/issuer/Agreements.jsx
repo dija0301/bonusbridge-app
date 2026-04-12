@@ -1410,6 +1410,42 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </Section>
           )}
 
+          {/* DocuSign status */}
+          {(isPN || isStarting) && (
+            <Section title="Document Execution">
+              {a.docusign_envelope_id ? (
+                <div className="flex flex-col gap-2">
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                    a.docusign_status === 'completed' ? 'bg-emerald-500/10 border-emerald-500/20' :
+                    a.docusign_status === 'sent'      ? 'bg-yellow-500/10 border-yellow-500/20' :
+                    'bg-slate-800 border-slate-700'
+                  }`}>
+                    <svg className={`w-3.5 h-3.5 ${a.docusign_status === 'completed' ? 'text-emerald-400' : 'text-yellow-400'}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M10 2v3h3"/><path d="M5 7h6M5 10h4"/></svg>
+                    <p className={`text-sm font-medium capitalize ${a.docusign_status === 'completed' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                      DocuSign: {a.docusign_status ?? 'Sent'}
+                    </p>
+                  </div>
+                  {a.sent_for_signature_at && (
+                    <p className="text-slate-500 text-xs">
+                      Sent {new Date(a.sent_for_signature_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                  {a.signed_document_url && (
+                    <a href={a.signed_document_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 text-xs font-medium transition">
+                      View Signed Document →
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-slate-500 text-sm italic">Document not yet sent for signature.</p>
+                  <p className="text-slate-600 text-xs">Configure DocuSign in Settings to enable electronic signature.</p>
+                </div>
+              )}
+            </Section>
+          )}
+
           {/* Notes */}
           {a.notes && (
             <div>
@@ -1419,7 +1455,16 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           )}
         </div>
 
-        <div className="shrink-0 px-5 py-4 border-t border-slate-800">
+        <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex flex-col gap-2">
+          {/* Send for Signature — shown when DocuSign is configured and not yet sent */}
+          {(isPN || isStarting) && !a.docusign_envelope_id && ['draft', 'onboarding'].includes(a.status) && (
+            <button
+              onClick={() => alert('DocuSign integration coming soon. Configure your DocuSign credentials in Settings to enable.')}
+              className="w-full py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M10 2v3h3"/><path d="M5 7h6M5 10h4"/></svg>
+              Send for Signature
+            </button>
+          )}
           <button onClick={() => onEdit(a)}
             className="w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">
             Edit Agreement
