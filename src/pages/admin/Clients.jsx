@@ -29,13 +29,21 @@ function XIcon({ className }) {
 }
 
 export default function AdminClients() {
-  const [clients, setClients]   = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [selected, setSelected] = useState(null)
-  const [features, setFeatures] = useState({})
-  const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(false)
-  const [search, setSearch]     = useState('')
+  const [clients, setClients]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [selected, setSelected]     = useState(null)
+  const [features, setFeatures]     = useState({})
+  const [saving, setSaving]         = useState(false)
+  const [saved, setSaved]           = useState(false)
+  const [search, setSearch]         = useState('')
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [newClient, setNewClient]   = useState({
+    org_name: '', plan_tier: 'manage', admin_first_name: '', admin_last_name: '',
+    admin_email: '', primary_contact_phone: '', contract_value: '', renewal_date: '',
+  })
+  const [creating, setCreating]     = useState(false)
+  const [createError, setCreateError] = useState(null)
+  const [createSuccess, setCreateSuccess] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -49,7 +57,28 @@ export default function AdminClients() {
     setLoading(false)
   }
 
-  async function selectClient(client) {
+  async function createClient() {
+    if (!newClient.org_name || !newClient.admin_email || !newClient.admin_first_name || !newClient.admin_last_name) {
+      setCreateError('Organization name, admin first name, last name, and email are required.')
+      return
+    }
+    setCreating(true)
+    setCreateError(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await supabase.functions.invoke('create-client', {
+      body: newClient,
+      headers: { Authorization: `Bearer ${session?.access_token}` }
+    })
+    setCreating(false)
+    if (res.error || res.data?.error) {
+      setCreateError(res.data?.error ?? res.error?.message)
+      return
+    }
+    setCreateSuccess(`Client created! Welcome email sent to ${newClient.admin_email}.`)
+    setNewClient({ org_name: '', plan_tier: 'manage', admin_first_name: '', admin_last_name: '', admin_email: '', primary_contact_phone: '', contract_value: '', renewal_date: '' })
+    setTimeout(() => { setShowNewClient(false); setCreateSuccess(null) }, 3000)
+    load()
+  }
     setSelected(client)
     const { data } = await supabase
       .from('issuer_features')
@@ -102,9 +131,15 @@ export default function AdminClients() {
           <h1 className="text-white text-2xl font-semibold">Clients</h1>
           <p className="text-slate-400 text-sm mt-1">{clients.length} total clients</p>
         </div>
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search clients…"
-          className="w-64 bg-slate-900 border border-slate-800 text-white placeholder-slate-500 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-brand-500 transition" />
+        <div className="flex items-center gap-3">
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search clients…"
+            className="w-64 bg-slate-900 border border-slate-800 text-white placeholder-slate-500 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-brand-500 transition" />
+          <button onClick={() => setShowNewClient(true)}
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
+            + New Client
+          </button>
+        </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
@@ -151,6 +186,69 @@ export default function AdminClients() {
           </table>
         )}
       </div>
+
+      {/* New Client Panel */}
+      {showNewClient && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/50" onClick={() => setShowNewClient(false)} />
+          <div className="w-full max-w-lg bg-slate-900 border-l border-slate-800 flex flex-col h-full">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+              <div>
+                <h2 className="text-white font-semibold">New Client</h2>
+                <p className="text-slate-500 text-xs mt-0.5">Creates organization, admin user, and sends welcome email</p>
+              </div>
+              <button onClick={() => setShowNewClient(false)} className="text-slate-400 hover:text-white transition">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
+              <Section title="Organization">
+                <Field label="Organization Name" value={newClient.org_name} onChange={v => setNewClient(n => ({ ...n, org_name: v }))} placeholder="Allina Health" />
+                <div>
+                  <label className="block text-slate-300 text-xs font-medium mb-1.5">Plan Tier</label>
+                  <select value={newClient.plan_tier} onChange={e => setNewClient(n => ({ ...n, plan_tier: e.target.value }))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                    {PLAN_TIERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Contract Value" type="number" value={newClient.contract_value} onChange={v => setNewClient(n => ({ ...n, contract_value: v }))} placeholder="0" />
+                  <Field label="Renewal Date" type="date" value={newClient.renewal_date} onChange={v => setNewClient(n => ({ ...n, renewal_date: v }))} />
+                </div>
+              </Section>
+
+              <Section title="Admin User">
+                <p className="text-slate-500 text-xs -mt-2">This person will be the primary admin for the organization. They'll receive a welcome email with a link to set their password.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="First Name" value={newClient.admin_first_name} onChange={v => setNewClient(n => ({ ...n, admin_first_name: v }))} placeholder="Jane" />
+                  <Field label="Last Name" value={newClient.admin_last_name} onChange={v => setNewClient(n => ({ ...n, admin_last_name: v }))} placeholder="Smith" />
+                </div>
+                <Field label="Email" type="email" value={newClient.admin_email} onChange={v => setNewClient(n => ({ ...n, admin_email: v }))} placeholder="jane@orgname.com" />
+                <Field label="Phone (optional)" type="tel" value={newClient.primary_contact_phone} onChange={v => setNewClient(n => ({ ...n, primary_contact_phone: v }))} placeholder="(612) 555-0101" />
+              </Section>
+
+              {createError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-3.5 py-2.5">{createError}</div>
+              )}
+              {createSuccess && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm rounded-lg px-3.5 py-2.5">{createSuccess}</div>
+              )}
+            </div>
+
+            <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex gap-3">
+              <button onClick={() => setShowNewClient(false)}
+                className="flex-1 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white text-sm font-medium transition">
+                Cancel
+              </button>
+              <button onClick={createClient} disabled={creating}
+                className="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-60 text-white text-sm font-medium transition">
+                {creating ? 'Creating…' : 'Create Client'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Client detail panel */}
       {selected && (
