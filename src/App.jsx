@@ -12,6 +12,11 @@ import Recipients from './pages/issuer/Recipients'
 import Collections from './pages/issuer/Collections'
 // Collections page is now Departure Response
 import Settings from './pages/issuer/Settings'
+import AdminShell from './pages/admin/AdminShell'
+import AdminDashboard from './pages/admin/Dashboard'
+import AdminClients from './pages/admin/Clients'
+import AdminAgreements from './pages/admin/AdminAgreements'
+import AdminRecipients from './pages/admin/AdminRecipients'
 import RecipientPortal from './pages/recipient/Portal'
 
 function RoleRedirect() {
@@ -64,16 +69,19 @@ export default function App() {
             }
           />
 
-          {/* Admin portal — placeholder */}
+          {/* Admin portal */}
           <Route
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <AppShell />
+                <AdminShell />
               </ProtectedRoute>
             }
           >
-            <Route index element={<div className="p-8 text-white">Admin dashboard — coming soon</div>} />
+            <Route index element={<AdminDashboard />} />
+            <Route path="clients"    element={<AdminClients />} />
+            <Route path="agreements" element={<AdminAgreements />} />
+            <Route path="recipients" element={<AdminRecipients />} />
           </Route>
 
           {/* Catch-all */}
