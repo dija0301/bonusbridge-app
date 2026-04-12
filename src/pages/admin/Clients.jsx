@@ -79,6 +79,8 @@ export default function AdminClients() {
     setTimeout(() => { setShowNewClient(false); setCreateSuccess(null) }, 3000)
     load()
   }
+
+  async function selectClient(client) {
     setSelected(client)
     const { data } = await supabase
       .from('issuer_features')
@@ -204,7 +206,7 @@ export default function AdminClients() {
 
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
               <Section title="Organization">
-                <Field label="Organization Name" value={newClient.org_name} onChange={v => setNewClient(n => ({ ...n, org_name: v }))} placeholder="Allina Health" />
+                <Field label="Organization Name" value={newClient.org_name} onChange={v => setNewClient(n => ({ ...n, org_name: v }))} placeholder="e.g. Acme Health System" />
                 <div>
                   <label className="block text-slate-300 text-xs font-medium mb-1.5">Plan Tier</label>
                   <select value={newClient.plan_tier} onChange={e => setNewClient(n => ({ ...n, plan_tier: e.target.value }))}
