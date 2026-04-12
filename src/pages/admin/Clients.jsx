@@ -79,7 +79,6 @@ export default function AdminClients() {
     setTimeout(() => { setShowNewClient(false); setCreateSuccess(null) }, 3000)
     load()
   }
-  async function selectClient(client) {
     setSelected(client)
     const { data } = await supabase
       .from('issuer_features')
