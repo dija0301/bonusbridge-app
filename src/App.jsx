@@ -12,6 +12,7 @@ import Recipients from './pages/issuer/Recipients'
 import Collections from './pages/issuer/Collections'
 // Collections page is now Departure Response
 import Settings from './pages/issuer/Settings'
+import Reports from './pages/issuer/Reports'
 import AdminShell from './pages/admin/AdminShell'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminClients from './pages/admin/Clients'
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="agreements"  element={<Agreements />} />
             <Route path="recipients"  element={<Recipients />} />
             <Route path="collections" element={<Collections />} />
+            <Route path="reports"     element={<Reports />} />
             <Route path="settings"    element={<Settings />} />
           </Route>
 
