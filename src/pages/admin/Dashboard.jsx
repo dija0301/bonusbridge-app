@@ -47,9 +47,8 @@ export default function AdminDashboard() {
   }
 
   const PLAN_STYLES = {
-    manage:  'bg-slate-500/10 text-slate-400 border-slate-500/20',
-    notify:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    execute: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
+    standard: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    docusign: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
   }
 
   return (
@@ -99,8 +98,8 @@ export default function AdminDashboard() {
                   <tr key={i.id} className="hover:bg-slate-800/30 transition">
                     <td className="px-6 py-3.5 text-slate-200 font-medium">{i.name}</td>
                     <td className="px-6 py-3.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${PLAN_STYLES[i.plan_tier] ?? PLAN_STYLES.manage}`}>
-                        {i.plan_tier ?? 'manage'}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${PLAN_STYLES[i.plan_tier] ?? PLAN_STYLES.standard}`}>
+                        {i.plan_tier === 'docusign' ? 'BonusBridge + DocuSign' : 'BonusBridge'}
                       </span>
                     </td>
                     <td className="px-6 py-3.5 text-slate-400 text-xs">

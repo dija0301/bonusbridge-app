@@ -5,9 +5,8 @@ const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: '
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 const PLAN_TIERS = [
-  { value: 'manage',  label: 'Manage'  },
-  { value: 'notify',  label: 'Notify'  },
-  { value: 'execute', label: 'Execute' },
+  { value: 'standard', label: 'BonusBridge' },
+  { value: 'docusign', label: 'BonusBridge + DocuSign' },
 ]
 
 const FEATURES = [
@@ -19,9 +18,8 @@ const FEATURES = [
 ]
 
 const PLAN_STYLES = {
-  manage:  'bg-slate-500/10 text-slate-400 border-slate-500/20',
-  notify:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  execute: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
+  standard: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  docusign: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
 }
 
 function XIcon({ className }) {
