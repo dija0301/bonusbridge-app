@@ -82,6 +82,7 @@ export default function AdminDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800">
               <h2 className="text-white font-medium">All Clients</h2>
+              <p className="text-slate-500 text-xs mt-0.5">Click "View as Issuer" to browse any client's dashboard</p>
             </div>
             <table className="w-full text-sm">
               <thead>
@@ -90,6 +91,7 @@ export default function AdminDashboard() {
                   <th className="text-left px-6 py-3 font-medium">Plan</th>
                   <th className="text-left px-6 py-3 font-medium">Onboarded</th>
                   <th className="text-left px-6 py-3 font-medium">Status</th>
+                  <th className="text-right px-6 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -108,6 +110,15 @@ export default function AdminDashboard() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${i.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                         {i.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <a
+                        href={`/issuer?preview_issuer=${i.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-400 hover:text-brand-300 text-xs font-medium transition">
+                        View as Issuer →
+                      </a>
                     </td>
                   </tr>
                 ))}

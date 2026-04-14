@@ -25,7 +25,7 @@ const roleNav = {
 }
 
 export default function AppShell() {
-  const { profile, role, displayName, signOut } = useAuth()
+  const { profile, role, displayName, signOut, isPreviewMode, previewIssuer } = useAuth()
   const navigate = useNavigate()
   const nav = roleNav[role] ?? ISSUER_NAV
 
@@ -96,7 +96,17 @@ export default function AppShell() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto flex flex-col">
+        {isPreviewMode && (
+          <div className="bg-brand-600/20 border-b border-brand-500/30 px-6 py-2 flex items-center justify-between shrink-0">
+            <p className="text-brand-300 text-xs font-medium">
+              👁 Preview mode — viewing as <strong>{previewIssuer?.name ?? 'client'}</strong>. Data is live.
+            </p>
+            <a href="/admin" className="text-brand-400 hover:text-brand-300 text-xs font-medium transition">
+              ← Back to Admin
+            </a>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>
