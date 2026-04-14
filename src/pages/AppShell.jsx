@@ -5,9 +5,10 @@ const ISSUER_NAV = [
   { to: '/issuer',             label: 'Overview',          icon: OverviewIcon },
   { to: '/issuer/agreements',  label: 'Agreements',        icon: AgreementsIcon },
   { to: '/issuer/recipients',  label: 'Recipients',        icon: RecipientsIcon },
-  { to: '/issuer/collections', label: 'Departure Response',icon: CollectionsIcon },
-  { to: '/issuer/reports',     label: 'Reports',           icon: ReportsIcon },
-  { to: '/issuer/settings',    label: 'Settings',          icon: SettingsIcon },
+  { to: '/issuer/collections', label: 'Departure Response', icon: CollectionsIcon },
+  { to: '/issuer/import',      label: 'Import',             icon: ImportIcon },
+  { to: '/issuer/reports',     label: 'Reports',            icon: ReportsIcon },
+  { to: '/issuer/settings',    label: 'Settings',           icon: SettingsIcon },
 ]
 
 const RECIPIENT_NAV = [
@@ -151,6 +152,15 @@ function CollectionsIcon({ className }) {
       <path d="M2 4h12M2 8h12M2 12h7"/>
       <circle cx="13" cy="12" r="2"/>
       <path d="M12 12h-1M13 11v-1"/>
+    </svg>
+  )
+}
+
+function ImportIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M8 10V2m0 8l-3-3m3 3l3-3"/>
+      <path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/>
     </svg>
   )
 }
