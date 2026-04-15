@@ -548,7 +548,6 @@ export default function RecipientPortal() {
   const firstName   = recipient?.first_name ?? 'there'
   const activeCount = agreements.filter(a => a.status === 'active').length
 
-  const isPreviewMode = !!sessionStorage.getItem('preview_recipient_user_id')
 
   return (
     <div className="min-h-screen bg-slate-950">
