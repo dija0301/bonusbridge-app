@@ -83,6 +83,7 @@ export default function AdminRecipients() {
                   <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 select-none" onClick={() => toggleSort('onboarding_complete')}>Onboarded{sortIcon('onboarding_complete')}</th>
                   <th className="text-left px-5 py-3 font-medium cursor-pointer hover:text-slate-300 select-none" onClick={() => toggleSort('last_login_at')}>Last Login{sortIcon('last_login_at')}</th>
                   <th className="text-left px-5 py-3 font-medium">Status</th>
+                  <th className="text-right px-5 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -117,6 +118,20 @@ export default function AdminRecipients() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${r.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                         {r.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {r.user_id && (
+                        <a
+                          href={`/recipient?preview_recipient=${r.user_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand-400 hover:text-brand-300 text-xs font-medium transition">
+                          View as Recipient →
+                        </a>
+                      )}
+                      {!r.user_id && (
+                        <span className="text-slate-600 text-xs italic">No portal access</span>
+                      )}
                     </td>
                   </tr>
                 ))}

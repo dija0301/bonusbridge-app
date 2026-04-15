@@ -473,39 +473,42 @@ export default function RecipientPortal() {
   const [error, setError]           = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
+  const isPreviewMode = !!sessionStorage.getItem('preview_recipient_user_id')
+
   useEffect(() => { if (session?.user?.id) load() }, [session])
 
   async function load() {
     setLoading(true)
     setError(null)
     try {
-      // Fetch ALL recipient records for this user (may span multiple orgs)
-      const { data: recs, error: recErr } = await supabase
-        .from('recipients').select('*').eq('user_id', session.user.id).order('created_at')
-      if (recErr || !recs?.length) throw new Error('Could not find your recipient profile. Please contact your administrator.')
+      const previewUserId = sessionStorage.getItem('preview_recipient_user_id')
+      const queryUserId   = previewUserId || session.user.id
 
-      // Use the first (oldest) recipient as primary for contact info display
+      const { data: recs, error: recErr } = await supabase
+        .from('recipients').select('*').eq('user_id', queryUserId).order('created_at')
+      if (recErr || !recs?.length) throw new Error('Could not find recipient profile. They may not have completed onboarding yet.')
+
       const primaryRec = recs[0]
       setRecipient(primaryRec)
 
-      // Check if ANY recipient record needs onboarding
       const needsOnboarding = recs.some(r => !r.onboarding_complete)
-      if (needsOnboarding) {
+      if (needsOnboarding && !isPreviewMode) {
         setShowOnboarding(true)
         setLoading(false)
         return
       }
 
-      // Log last login on all recipient records
-      const now = new Date().toISOString()
-      for (const rec of recs) {
-        const loginUpdates = { last_login_at: now }
-        if (!rec.first_login_at) loginUpdates.first_login_at = now
-        await supabase.from('recipients').update(loginUpdates).eq('id', rec.id)
-        await supabase.from('recipient_events').insert({ recipient_id: rec.id, issuer_id: rec.issuer_id, event_type: 'login' })
+      // Only log login events for real sessions, not admin previews
+      if (!isPreviewMode) {
+        const now = new Date().toISOString()
+        for (const rec of recs) {
+          const loginUpdates = { last_login_at: now }
+          if (!rec.first_login_at) loginUpdates.first_login_at = now
+          await supabase.from('recipients').update(loginUpdates).eq('id', rec.id)
+          await supabase.from('recipient_events').insert({ recipient_id: rec.id, issuer_id: rec.issuer_id, event_type: 'login' })
+        }
       }
 
-      // Fetch ALL agreements across all recipient records
       const recipientIds = recs.map(r => r.id)
       const { data: ags, error: agErr } = await supabase
         .from('agreements').select('*')
@@ -545,8 +548,16 @@ export default function RecipientPortal() {
   const firstName   = recipient?.first_name ?? 'there'
   const activeCount = agreements.filter(a => a.status === 'active').length
 
+  const isPreviewMode = !!sessionStorage.getItem('preview_recipient_user_id')
+
   return (
     <div className="min-h-screen bg-slate-950">
+      {isPreviewMode && (
+        <div className="bg-brand-600/20 border-b border-brand-500/30 px-6 py-2 flex items-center justify-between">
+          <p className="text-brand-300 text-xs font-medium">👁 Preview mode — viewing recipient portal as admin.</p>
+          <a href="/admin/recipients" className="text-brand-400 hover:text-brand-300 text-xs font-medium transition">← Back to Admin</a>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

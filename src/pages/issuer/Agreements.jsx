@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { amortPreview } from '../../lib/amortization'
+import { amortPreview, estimateBalanceAtDate } from '../../lib/amortization'
 
 // ── Constants ──────────────────────────────────────────────
 const BONUS_TYPES = [
@@ -1108,6 +1108,8 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [schedule, setSchedule]         = useState(null)
   const [schedLoading, setSchedLoading] = useState(false)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [resignDate, setResignDate]     = useState('')
+  const [resignEst, setResignEst]       = useState(null)
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
@@ -1441,6 +1443,42 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                 <div className="flex flex-col gap-2">
                   <p className="text-slate-500 text-sm italic">Document not yet sent for signature.</p>
                   <p className="text-slate-600 text-xs">Configure DocuSign in Settings to enable electronic signature.</p>
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* Resignation calculator */}
+          {(isPN || isStarting) && a.status === 'active' && (
+            <Section title="Resignation Estimator">
+              <p className="text-slate-400 text-sm">Enter a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
+              <div className="flex items-end gap-3 mt-2">
+                <div className="flex-1">
+                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Hypothetical Departure Date</label>
+                  <input type="date" value={resignDate}
+                    onChange={e => {
+                      setResignDate(e.target.value)
+                      if (e.target.value) {
+                        const est = estimateBalanceAtDate(a, e.target.value)
+                        setResignEst(est)
+                      } else {
+                        setResignEst(null)
+                      }
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
+                </div>
+              </div>
+              {resignEst !== null && (
+                <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
+                    <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
+                  </div>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Estimated gross repayment amount as of {new Date(resignDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. 
+                    This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions. 
+                    Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
+                  </p>
                 </div>
               )}
             </Section>

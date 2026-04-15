@@ -155,23 +155,26 @@ export default function Settings() {
   const { profile } = useAuth()
   const issuerId    = profile?.issuer_id
 
-  const [org, setOrg]           = useState(null)
-  const [notif, setNotif]       = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(false)
-  const [error, setError]       = useState(null)
+  const [org, setOrg]               = useState(null)
+  const [notif, setNotif]           = useState(null)
+  const [customFields, setCustomFields] = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [saving, setSaving]         = useState(false)
+  const [saved, setSaved]           = useState(false)
+  const [error, setError]           = useState(null)
 
   useEffect(() => { if (issuerId) load() }, [issuerId])
 
   async function load() {
     setLoading(true)
-    const [orgRes, notifRes] = await Promise.all([
+    const [orgRes, notifRes, cfRes] = await Promise.all([
       supabase.from('issuers').select('*').eq('id', issuerId).single(),
       supabase.from('notification_settings').select('*').eq('issuer_id', issuerId).single(),
+      supabase.from('issuer_custom_fields').select('*').eq('issuer_id', issuerId).order('sort_order'),
     ])
 
     setOrg(orgRes.data)
+    setCustomFields(cfRes.data ?? [])
 
     if (notifRes.error?.code === 'PGRST116') {
       const { data } = await supabase
@@ -188,9 +191,33 @@ export default function Settings() {
   function setO(k, v) { setOrg(o => ({ ...o, [k]: v })) }
   function setN(k, v) { setNotif(n => ({ ...n, [k]: v })) }
 
+  function addCustomField() {
+    if (customFields.length >= 10) return
+    setCustomFields(f => [...f, { id: null, issuer_id: issuerId, field_key: '', field_label: '', field_type: 'text', sort_order: f.length, is_active: true, _new: true }])
+  }
+
+  function updateCustomField(i, k, v) {
+    setCustomFields(f => f.map((field, idx) => idx === i ? { ...field, [k]: v } : field))
+  }
+
+  function removeCustomField(i) {
+    setCustomFields(f => f.filter((_, idx) => idx !== i))
+  }
+
   async function handleSave() {
     setSaving(true)
     setError(null)
+
+    // Save custom fields
+    for (const field of customFields) {
+      if (!field.field_label) continue
+      const key = field.field_key || field.field_label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+      if (field.id) {
+        await supabase.from('issuer_custom_fields').update({ field_label: field.field_label, field_key: key, field_type: field.field_type, sort_order: field.sort_order, is_active: field.is_active }).eq('id', field.id)
+      } else {
+        await supabase.from('issuer_custom_fields').insert({ issuer_id: issuerId, field_label: field.field_label, field_key: key, field_type: field.field_type, sort_order: field.sort_order, is_active: true })
+      }
+    }
 
     const [orgRes, notifRes] = await Promise.all([
       supabase.from('issuers').update({
@@ -384,6 +411,43 @@ export default function Settings() {
             checked={notif?.allow_recipient_optout}
             onChange={v => setN('allow_recipient_optout', v)}
             hint="Transactional emails (acknowledgment, status changes) cannot be opted out of" />
+        </SectionCard>
+
+        {/* ── Custom Org Fields ── */}
+        <SectionCard title="Custom Organization Fields" description="Add up to 10 custom fields for recipients — cost center, location, clinic ID, or any internal identifier needed for payroll or reporting">
+          <p className="text-slate-500 text-xs -mt-2">Custom fields appear on recipient records, are included in CSV exports, and can be used to filter reports.</p>
+
+          <div className="flex flex-col gap-3">
+            {customFields.map((field, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={field.field_label}
+                  onChange={e => updateCustomField(i, 'field_label', e.target.value)}
+                  placeholder="Field label (e.g. Cost Center)"
+                  className="flex-1 bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 transition"
+                />
+                <select
+                  value={field.field_type}
+                  onChange={e => updateCustomField(i, 'field_type', e.target.value)}
+                  className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 transition">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                </select>
+                <button onClick={() => removeCustomField(i)} className="text-slate-500 hover:text-red-400 transition text-sm">✕</button>
+              </div>
+            ))}
+          </div>
+
+          {customFields.length < 10 ? (
+            <button onClick={addCustomField}
+              className="flex items-center gap-2 text-brand-400 hover:text-brand-300 text-sm font-medium transition">
+              + Add Field
+              <span className="text-slate-600 text-xs font-normal">{10 - customFields.length} remaining</span>
+            </button>
+          ) : (
+            <p className="text-slate-600 text-xs">Maximum of 10 custom fields reached.</p>
+          )}
         </SectionCard>
 
         {/* ── User Management — Coming Soon ── */}
