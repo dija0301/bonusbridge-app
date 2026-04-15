@@ -1456,11 +1456,12 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                 <div className="flex-1">
                   <label className="block text-slate-400 text-xs font-medium mb-1.5">Hypothetical Departure Date</label>
                   <input type="date" value={resignDate}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={e => {
                       setResignDate(e.target.value)
                       if (e.target.value) {
-                        const est = estimateBalanceAtDate(a, e.target.value)
-                        setResignEst(est)
+                        const result = estimateBalanceAtDate(a, e.target.value)
+                        setResignEst(result?.balance ?? result ?? null)
                       } else {
                         setResignEst(null)
                       }
