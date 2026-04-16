@@ -1456,12 +1456,20 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                 <label className="block text-slate-400 text-xs font-medium mb-1.5">Hypothetical Departure Date</label>
                 <input type="date" value={resignDate}
                   onChange={e => {
-                    setResignDate(e.target.value)
-                    if (e.target.value) {
-                      const result = estimateBalanceAtDate(a, e.target.value)
+                    const val = e.target.value
+                    setResignDate(val)
+                    if (val && val.length === 10) {
+                      const result = estimateBalanceAtDate(a, val)
                       setResignEst(result?.balance ?? result ?? null)
                     } else {
                       setResignEst(null)
+                    }
+                  }}
+                  onBlur={e => {
+                    const val = e.target.value
+                    if (val && val.length === 10) {
+                      const result = estimateBalanceAtDate(a, val)
+                      setResignEst(result?.balance ?? result ?? null)
                     }
                   }}
                   style={{ colorScheme: 'dark' }}
