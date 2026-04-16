@@ -1110,6 +1110,7 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [showSchedule, setShowSchedule] = useState(false)
   const [resignDate, setResignDate]     = useState('')
   const [resignEst, setResignEst]       = useState(null)
+  const resignTimer                     = useState(null)
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
@@ -1458,19 +1459,15 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                   onChange={e => {
                     const val = e.target.value
                     setResignDate(val)
-                    if (val && val.length === 10) {
-                      const result = estimateBalanceAtDate(a, val)
-                      setResignEst(result?.balance ?? result ?? null)
-                    } else {
-                      setResignEst(null)
-                    }
-                  }}
-                  onBlur={e => {
-                    const val = e.target.value
-                    if (val && val.length === 10) {
-                      const result = estimateBalanceAtDate(a, val)
-                      setResignEst(result?.balance ?? result ?? null)
-                    }
+                    if (resignTimer[0]) clearTimeout(resignTimer[0])
+                    resignTimer[0] = setTimeout(() => {
+                      if (val && val.length === 10) {
+                        const result = estimateBalanceAtDate(a, val)
+                        setResignEst(result?.balance ?? result ?? null)
+                      } else {
+                        setResignEst(null)
+                      }
+                    }, 400)
                   }}
                   style={{ colorScheme: 'dark' }}
                   className="w-full sm:w-64 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
