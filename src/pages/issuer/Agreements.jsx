@@ -1110,7 +1110,6 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [showSchedule, setShowSchedule] = useState(false)
   const [resignDate, setResignDate]     = useState('')
   const [resignEst, setResignEst]       = useState(null)
-  const resignTimer                     = useState(null)
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
@@ -1452,22 +1451,26 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           {/* Resignation calculator */}
           {(isPN || isStarting) && a.status === 'active' && (
             <Section title="Resignation Estimator">
-              <p className="text-slate-400 text-sm">Enter a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
+              <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
               <div className="mt-3">
                 <label className="block text-slate-400 text-xs font-medium mb-1.5">Hypothetical Departure Date</label>
-                <input type="date" value={resignDate}
+                <input type="date"
+                  key={a.id}
+                  onBlur={e => {
+                    const val = e.target.value
+                    if (val && val.length === 10) {
+                      setResignDate(val)
+                      const result = estimateBalanceAtDate(a, val)
+                      setResignEst(result?.balance ?? result ?? null)
+                    }
+                  }}
                   onChange={e => {
                     const val = e.target.value
-                    setResignDate(val)
-                    if (resignTimer[0]) clearTimeout(resignTimer[0])
-                    resignTimer[0] = setTimeout(() => {
-                      if (val && val.length === 10) {
-                        const result = estimateBalanceAtDate(a, val)
-                        setResignEst(result?.balance ?? result ?? null)
-                      } else {
-                        setResignEst(null)
-                      }
-                    }, 400)
+                    if (val && val.length === 10) {
+                      setResignDate(val)
+                      const result = estimateBalanceAtDate(a, val)
+                      setResignEst(result?.balance ?? result ?? null)
+                    }
                   }}
                   style={{ colorScheme: 'dark' }}
                   className="w-full sm:w-64 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
