@@ -1450,45 +1450,69 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           )}
 
           {/* Resignation calculator */}
-          {(isPN || isStarting) && a.status === 'active' && (
-            <Section title="Resignation Estimator">
-              <p className="text-slate-400 text-sm">Enter a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
-              <div className="mt-3 flex items-end gap-3">
-                <div className="flex-1 sm:max-w-xs">
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Hypothetical Departure Date</label>
-                  <input
-                    type="date"
-                    ref={el => { resignInputRef.current = el }}
-                    style={{ colorScheme: 'dark' }}
-                    onInput={e => {
-                      const val = e.target.value
-                      if (val && val.length === 10) {
-                        setResignDate(val)
-                        const result = estimateBalanceAtDate(a, val)
-                        setResignEst(result?.balance ?? result ?? null)
-                      } else {
-                        setResignEst(null)
-                        setResignDate('')
-                      }
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
-                </div>
-              </div>
-              {resignEst !== null && resignDate && (
-                <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
-                    <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
+          {(isPN || isStarting) && a.status === 'active' && (() => {
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+            const days   = Array.from({length:31}, (_,i) => i+1)
+            const years  = Array.from({length:10}, (_,i) => new Date().getFullYear() - 2 + i)
+            const [rm, setRm] = [resignDate.split('-')[1]||'', v => setResignDate(d => `${d.split('-')[0]||''}-${v}-${d.split('-')[2]||''}`)]
+            const [rd, setRd] = [resignDate.split('-')[2]||'', v => setResignDate(d => `${d.split('-')[0]||''}-${d.split('-')[1]||''}-${v}`)]
+            const [ry, setRy] = [resignDate.split('-')[0]||'', v => setResignDate(d => `${v}-${d.split('-')[1]||''}-${d.split('-')[2]||''}`)]
+
+            function handleChange(year, month, day) {
+              if (year && month && day) {
+                const iso = `${year}-${month}-${day}`
+                const result = estimateBalanceAtDate(a, iso)
+                setResignEst(result?.balance ?? result ?? null)
+              } else {
+                setResignEst(null)
+              }
+            }
+
+            return (
+              <Section title="Resignation Estimator">
+                <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
+                <div className="mt-3 flex items-end gap-2 flex-wrap">
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Month</label>
+                    <select value={rm} onChange={e => { setRm(e.target.value); handleChange(ry, e.target.value, rd) }}
+                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                      <option value="">Month</option>
+                      {months.map((m,i) => <option key={m} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+                    </select>
                   </div>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Estimated gross repayment amount as of {new Date(resignDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
-                    This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
-                    Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
-                  </p>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Day</label>
+                    <select value={rd} onChange={e => { setRd(e.target.value); handleChange(ry, rm, e.target.value) }}
+                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                      <option value="">Day</option>
+                      {days.map(d => <option key={d} value={String(d).padStart(2,'0')}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Year</label>
+                    <select value={ry} onChange={e => { setRy(e.target.value); handleChange(e.target.value, rm, rd) }}
+                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                      <option value="">Year</option>
+                      {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
                 </div>
-              )}
-            </Section>
-          )}
+                {resignEst !== null && (
+                  <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
+                      <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
+                    </div>
+                    <p className="text-slate-500 text-xs leading-relaxed">
+                      Estimated gross repayment amount as of {new Date(`${resignDate}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
+                      This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
+                      Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
+                    </p>
+                  </div>
+                )}
+              </Section>
+            )
+          })()}
 
           {/* Notes */}
           {a.notes && (
