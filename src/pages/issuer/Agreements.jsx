@@ -1108,9 +1108,11 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [schedule, setSchedule]         = useState(null)
   const [schedLoading, setSchedLoading] = useState(false)
   const [showSchedule, setShowSchedule] = useState(false)
-  const [resignDate, setResignDate]     = useState('')
   const [resignEst, setResignEst]       = useState(null)
-  const resignInputRef                  = useRef(null)
+  const [resignDate, setResignDate]     = useState('')
+  const [resignM, setResignM]           = useState('')
+  const [resignD, setResignD]           = useState('')
+  const [resignY, setResignY]           = useState('')
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
