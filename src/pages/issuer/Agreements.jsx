@@ -1113,6 +1113,12 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [resignM, setResignM]           = useState('')
   const [resignD, setResignD]           = useState('')
   const [resignY, setResignY]           = useState('')
+  const [showSendSig, setShowSendSig]   = useState(false)
+  const [sigEmail, setSigEmail]         = useState('')
+  const [sigName, setSigName]           = useState('')
+  const [sigSending, setSigSending]     = useState(false)
+  const [sigError, setSigError]         = useState(null)
+  const [sigSuccess, setSigSuccess]     = useState(null)
 
   const principal   = parseFloat(a.principal_amount) || 0
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
@@ -1452,69 +1458,86 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           )}
 
           {/* Resignation calculator */}
-          {(isPN || isStarting) && a.status === 'active' && (() => {
-            const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
-            const days   = Array.from({length:31}, (_,i) => i+1)
-            const years  = Array.from({length:10}, (_,i) => new Date().getFullYear() - 2 + i)
-            const [rm, setRm] = [resignDate.split('-')[1]||'', v => setResignDate(d => `${d.split('-')[0]||''}-${v}-${d.split('-')[2]||''}`)]
-            const [rd, setRd] = [resignDate.split('-')[2]||'', v => setResignDate(d => `${d.split('-')[0]||''}-${d.split('-')[1]||''}-${v}`)]
-            const [ry, setRy] = [resignDate.split('-')[0]||'', v => setResignDate(d => `${v}-${d.split('-')[1]||''}-${d.split('-')[2]||''}`)]
-
-            function handleChange(year, month, day) {
-              if (year && month && day) {
-                const iso = `${year}-${month}-${day}`
-                const result = estimateBalanceAtDate(a, iso)
-                setResignEst(result?.balance ?? result ?? null)
-              } else {
-                setResignEst(null)
-              }
-            }
-
-            return (
-              <Section title="Resignation Estimator">
-                <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
-                <div className="mt-3 flex items-end gap-2 flex-wrap">
-                  <div>
-                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Month</label>
-                    <select value={rm} onChange={e => { setRm(e.target.value); handleChange(ry, e.target.value, rd) }}
-                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                      <option value="">Month</option>
-                      {months.map((m,i) => <option key={m} value={String(i+1).padStart(2,'0')}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Day</label>
-                    <select value={rd} onChange={e => { setRd(e.target.value); handleChange(ry, rm, e.target.value) }}
-                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                      <option value="">Day</option>
-                      {days.map(d => <option key={d} value={String(d).padStart(2,'0')}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 text-xs font-medium mb-1.5">Year</label>
-                    <select value={ry} onChange={e => { setRy(e.target.value); handleChange(e.target.value, rm, rd) }}
-                      className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                      <option value="">Year</option>
-                      {years.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
+          {(isPN || isStarting) && a.status === 'active' && (
+            <Section title="Resignation Estimator">
+              <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
+              <div className="mt-3 flex items-end gap-2 flex-wrap">
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Month</label>
+                  <select value={resignM}
+                    onChange={e => {
+                      const m = e.target.value
+                      setResignM(m)
+                      if (m && resignD && resignY) {
+                        const iso = `${resignY}-${m}-${resignD}`
+                        setResignDate(iso)
+                        const r = estimateBalanceAtDate(a, iso)
+                        setResignEst(r?.balance ?? r ?? null)
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                    <option value="">Month</option>
+                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m,i) => (
+                      <option key={m} value={String(i+1).padStart(2,'0')}>{m}</option>
+                    ))}
+                  </select>
                 </div>
-                {resignEst !== null && (
-                  <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
-                      <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
-                    </div>
-                    <p className="text-slate-500 text-xs leading-relaxed">
-                      Estimated gross repayment amount as of {new Date(`${resignDate}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
-                      This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
-                      Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
-                    </p>
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Day</label>
+                  <select value={resignD}
+                    onChange={e => {
+                      const d = e.target.value
+                      setResignD(d)
+                      if (resignM && d && resignY) {
+                        const iso = `${resignY}-${resignM}-${d}`
+                        setResignDate(iso)
+                        const r = estimateBalanceAtDate(a, iso)
+                        setResignEst(r?.balance ?? r ?? null)
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                    <option value="">Day</option>
+                    {Array.from({length:31}, (_,i) => String(i+1).padStart(2,'0')).map(d => (
+                      <option key={d} value={d}>{parseInt(d)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Year</label>
+                  <select value={resignY}
+                    onChange={e => {
+                      const y = e.target.value
+                      setResignY(y)
+                      if (resignM && resignD && y) {
+                        const iso = `${y}-${resignM}-${resignD}`
+                        setResignDate(iso)
+                        const r = estimateBalanceAtDate(a, iso)
+                        setResignEst(r?.balance ?? r ?? null)
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
+                    <option value="">Year</option>
+                    {Array.from({length:10}, (_,i) => new Date().getFullYear() - 2 + i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {resignEst !== null && resignDate && (
+                <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
+                    <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
                   </div>
-                )}
-              </Section>
-            )
-          })()}
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Estimated gross repayment amount as of {new Date(resignDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
+                    This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
+                    Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
+                  </p>
+                </div>
+              )}
+            </Section>
+          )}
 
           {/* Notes */}
           {a.notes && (
@@ -1526,10 +1549,10 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
         </div>
 
         <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex flex-col gap-2">
-          {/* Send for Signature — shown when DocuSign is configured and not yet sent */}
-          {(isPN || isStarting) && !a.docusign_envelope_id && ['draft', 'onboarding'].includes(a.status) && (
+          {/* Send for Signature */}
+          {(isPN || isStarting) && !a.docusign_envelope_id && ['draft', 'onboarding', 'active'].includes(a.status) && (
             <button
-              onClick={() => alert('DocuSign integration coming soon. Configure your DocuSign credentials in Settings to enable.')}
+              onClick={() => { setShowSendSig(true); setSigError(null); setSigSuccess(null) }}
               className="w-full py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition flex items-center justify-center gap-2">
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M10 2v3h3"/><path d="M5 7h6M5 10h4"/></svg>
               Send for Signature
@@ -1540,6 +1563,108 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             Edit Agreement
           </button>
         </div>
+
+        {/* Send for Signature Modal */}
+        {showSendSig && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md mx-4 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+                <div>
+                  <h2 className="text-white font-semibold">Send for Signature</h2>
+                  <p className="text-slate-500 text-xs mt-0.5">DocuSign · {a.agreement_number || 'Agreement'}</p>
+                </div>
+                <button onClick={() => setShowSendSig(false)} className="text-slate-400 hover:text-white transition">
+                  <svg className="w-5 h-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+                </button>
+              </div>
+
+              {sigSuccess ? (
+                <div className="px-5 py-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <p className="text-white font-medium mb-1">Sent for signature</p>
+                  <p className="text-slate-400 text-sm">DocuSign envelope sent to {sigSuccess.sent_to}</p>
+                  <p className="text-slate-500 text-xs mt-1">Issuer countersignature will go to {sigSuccess.countersign}</p>
+                  <button onClick={() => { setShowSendSig(false); onEdit(a) }}
+                    className="mt-6 px-6 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <div className="px-5 py-5 flex flex-col gap-4">
+                  {/* Recipient info */}
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                    <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2">Recipient</p>
+                    <p className="text-slate-200 text-sm font-medium">{a.recipients?.first_name} {a.recipients?.last_name}</p>
+                    <p className="text-brand-400 text-sm">{a.recipients?.email}</p>
+                  </div>
+
+                  {/* Issuer signatory */}
+                  <div>
+                    <label className="block text-slate-300 text-xs font-medium mb-1.5">Issuer Signatory Name</label>
+                    <input type="text" value={sigName} onChange={e => setSigName(e.target.value)}
+                      placeholder="Jane Crawford, VP Human Resources"
+                      className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 text-xs font-medium mb-1.5">Issuer Signatory Email</label>
+                    <input type="email" value={sigEmail} onChange={e => setSigEmail(e.target.value)}
+                      placeholder="jane@organization.com"
+                      className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition" />
+                    <p className="text-slate-600 text-xs mt-1">This person will countersign after the recipient.</p>
+                  </div>
+
+                  {/* What happens */}
+                  <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-4">
+                    <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2">What happens next</p>
+                    <div className="flex flex-col gap-1.5 text-slate-500 text-xs">
+                      <p>1. Recipient receives DocuSign email to sign</p>
+                      <p>2. After recipient signs, issuer receives countersignature request</p>
+                      <p>3. Signed document is stored and linked to this agreement</p>
+                      <p>4. Agreement status updates automatically</p>
+                    </div>
+                  </div>
+
+                  {sigError && (
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-3.5 py-2.5">{sigError}</div>
+                  )}
+
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={() => setShowSendSig(false)}
+                      className="flex-1 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white text-sm font-medium transition">
+                      Cancel
+                    </button>
+                    <button
+                      disabled={sigSending || !sigEmail}
+                      onClick={async () => {
+                        setSigSending(true)
+                        setSigError(null)
+                        const { data: { session } } = await supabase.auth.getSession()
+                        const res = await supabase.functions.invoke('send-for-signature', {
+                          body: {
+                            agreement_id: a.id,
+                            issuer_signatory_email: sigEmail,
+                            issuer_signatory_name:  sigName,
+                          },
+                          headers: { Authorization: `Bearer ${session?.access_token}` }
+                        })
+                        setSigSending(false)
+                        if (res.error || res.data?.error) {
+                          setSigError(res.data?.error ?? res.error?.message ?? 'Something went wrong')
+                          return
+                        }
+                        setSigSuccess(res.data)
+                      }}
+                      className="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-60 text-white text-sm font-medium transition">
+                      {sigSending ? 'Sending…' : 'Send →'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
