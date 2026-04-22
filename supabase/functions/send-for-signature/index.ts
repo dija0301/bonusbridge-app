@@ -11,44 +11,78 @@ const DOCUSIGN_AUTH_URL = 'https://account-d.docusign.com'    // switch to 'http
 async function getDocuSignToken(): Promise<string> {
   const integrationKey = Deno.env.get('DOCUSIGN_INTEGRATION_KEY')!
   const rsaPrivateKey   = Deno.env.get('DOCUSIGN_RSA_PRIVATE_KEY')!
-  const accountId       = Deno.env.get('DOCUSIGN_ACCOUNT_ID')!
+  // sub = API User GUID (the user we impersonate via JWT Grant), NOT the account ID.
+  // The account ID goes in the REST URL path, not the JWT claim.
+  const userId          = Deno.env.get('DOCUSIGN_USER_ID')!
 
-  // Build JWT claim
   const now = Math.floor(Date.now() / 1000)
   const claim = {
     iss: integrationKey,
-    sub: accountId,
+    sub: userId,
     aud: 'account-d.docusign.com',
     iat: now,
     exp: now + 3600,
     scope: 'signature impersonation',
   }
 
-  // Encode JWT header and payload
   const header  = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
   const payload = btoa(JSON.stringify(claim)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
   const signingInput = `${header}.${payload}`
 
-  // Import RSA private key
-  const pemContents = rsaPrivateKey
-    .replace('-----BEGIN RSA PRIVATE KEY-----', '')
-    .replace('-----END RSA PRIVATE KEY-----', '')
-    .replace(/\s/g, '')
+  // Supabase secrets sometimes strip newlines from PEM values — re-wrap if so
+  let pemKey = rsaPrivateKey.trim()
+  if (!pemKey.includes('\n')) {
+    pemKey = pemKey
+      .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----\n')
+      .replace('-----END RSA PRIVATE KEY-----', '\n-----END RSA PRIVATE KEY-----')
+      .replace(/-----BEGIN RSA PRIVATE KEY-----\n(.+)\n-----END RSA PRIVATE KEY-----/, (_m, b) => {
+        const chunks = b.match(/.{1,64}/g) || []
+        return `-----BEGIN RSA PRIVATE KEY-----\n${chunks.join('\n')}\n-----END RSA PRIVATE KEY-----`
+      })
+  }
 
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
+  const pemContents = pemKey
+    .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/g, '')
+    .replace(/-----END (?:RSA )?PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '')
 
-  const privateKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
 
-  // Sign JWT
+  // Try pkcs8 first (DocuSign generates pkcs8 via `openssl pkcs8 -topk8`);
+  // if the key is raw PKCS#1 (BEGIN RSA PRIVATE KEY), wrap it in a PKCS#8 header
+  let privateKey: CryptoKey
+  try {
+    privateKey = await crypto.subtle.importKey(
+      'pkcs8', binaryDer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['sign']
+    )
+  } catch {
+    const pkcs8Header = new Uint8Array([
+      0x30, 0x82, 0x00, 0x00,
+      0x02, 0x01, 0x00,
+      0x30, 0x0d,
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
+        0x05, 0x00,
+      0x04, 0x82, 0x00, 0x00,
+    ])
+    const totalLen = pkcs8Header.length - 4 + binaryDer.length
+    pkcs8Header[2] = (totalLen >> 8) & 0xff
+    pkcs8Header[3] = totalLen & 0xff
+    pkcs8Header[pkcs8Header.length - 2] = (binaryDer.length >> 8) & 0xff
+    pkcs8Header[pkcs8Header.length - 1] = binaryDer.length & 0xff
+    const pkcs8 = new Uint8Array(pkcs8Header.length + binaryDer.length)
+    pkcs8.set(pkcs8Header)
+    pkcs8.set(binaryDer, pkcs8Header.length)
+    privateKey = await crypto.subtle.importKey(
+      'pkcs8', pkcs8,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['sign']
+    )
+  }
+
   const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    privateKey,
+    'RSASSA-PKCS1-v1_5', privateKey,
     new TextEncoder().encode(signingInput)
   )
 
@@ -57,7 +91,6 @@ async function getDocuSignToken(): Promise<string> {
 
   const jwt = `${signingInput}.${sigB64}`
 
-  // Exchange JWT for access token
   const tokenRes = await fetch(`${DOCUSIGN_AUTH_URL}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -121,7 +154,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Fetch agreement + recipient + issuer
     const { data: ag, error: agErr } = await supabase
       .from('agreements')
       .select('*, recipients(*), issuers(*)')
@@ -140,7 +172,6 @@ Deno.serve(async (req) => {
     const periods   = parseInt(ag.forgiveness_periods) || 1
     const perPeriod = calcPerPeriodAmount(principal, rate, periods)
 
-    // Build template role tabs (field values)
     const tabs = {
       textTabs: [
         { tabLabel: 'agreement_number',      value: ag.agreement_number ?? '' },
@@ -164,16 +195,13 @@ Deno.serve(async (req) => {
       ]
     }
 
-    // Get DocuSign access token
     const accessToken  = await getDocuSignToken()
     const accountId    = Deno.env.get('DOCUSIGN_ACCOUNT_ID')!
     const templateId   = Deno.env.get('DOCUSIGN_TEMPLATE_ID')!
 
-    // Determine issuer signatory — use provided or fall back to issuer primary contact
     const signatoryEmail = issuer_signatory_email || issuer?.primary_contact_email
     const signatoryName  = issuer_signatory_name  || issuer?.primary_contact_name || issuer?.name
 
-    // Create envelope from template
     const envelope = {
       templateId,
       status: 'sent',
@@ -226,7 +254,6 @@ Deno.serve(async (req) => {
     const envelopeData = await envelopeRes.json()
     const envelopeId   = envelopeData.envelopeId
 
-    // Update agreement with DocuSign envelope ID and status
     await supabase.from('agreements').update({
       docusign_envelope_id:  envelopeId,
       docusign_status:       'sent',
@@ -234,7 +261,6 @@ Deno.serve(async (req) => {
       status:                'pending_signature',
     }).eq('id', agreement_id)
 
-    // Log event
     await supabase.from('recipient_events').insert({
       recipient_id: rec.id,
       issuer_id:    ag.issuer_id,
