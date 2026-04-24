@@ -43,8 +43,14 @@ function DownloadIcon({ className }) {
 }
 
 const BONUS_TYPE_LABELS = {
-  signing_bonus: 'Signing Bonus', starting_bonus: 'Starting Bonus',
-  retention_bonus: 'Retention Bonus', performance_bonus: 'Performance Bonus', custom: 'Custom',
+  signing_bonus:         'Signing Bonus',
+  starting_bonus:        'Starting Bonus',
+  relocation_bonus:      'Relocation Bonus',
+  tuition_reimbursement: 'Tuition / CE Reimbursement',
+  retention_bonus:       'Retention Bonus',
+  performance_bonus:     'Performance Bonus',
+  referral_bonus:        'Referral Bonus',
+  custom:                'Custom',
 }
 
 // ── Filter bar ─────────────────────────────────────────────
@@ -81,8 +87,12 @@ function FilterBar({ filters, onChange }) {
           <option value="all">All Types</option>
           <option value="signing_bonus">Signing Bonus</option>
           <option value="starting_bonus">Starting Bonus</option>
+          <option value="relocation_bonus">Relocation Bonus</option>
+          <option value="tuition_reimbursement">Tuition / CE Reimbursement</option>
           <option value="retention_bonus">Retention Bonus</option>
           <option value="performance_bonus">Performance Bonus</option>
+          <option value="referral_bonus">Referral Bonus</option>
+          <option value="custom">Custom</option>
         </select>
       </div>
       <div className="flex items-center gap-2 pb-0.5">

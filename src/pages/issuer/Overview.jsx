@@ -8,11 +8,14 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short
 const recipientName = r => r ? [r.first_name, r.last_name].filter(Boolean).join(' ') || '—' : '—'
 
 const BONUS_TYPE_LABELS = {
-  signing_bonus:     'Signing',
-  starting_bonus:    'Starting',
-  retention_bonus:   'Retention',
-  performance_bonus: 'Performance',
-  custom:            'Custom',
+  signing_bonus:         'Signing',
+  starting_bonus:        'Starting',
+  relocation_bonus:      'Relocation',
+  tuition_reimbursement: 'Tuition / CE',
+  retention_bonus:       'Retention',
+  performance_bonus:     'Performance',
+  referral_bonus:        'Referral',
+  custom:                'Custom',
 }
 
 const STATUS_STYLES = {
@@ -106,6 +109,16 @@ export default function IssuerOverview() {
           const d = new Date(inst.date)
           if (d >= today && d <= in90Days) {
             upcoming.push({ agreement: a, date: inst.date, amount: inst.amount, label: 'Retention Payment' })
+          }
+        }
+      })
+    }
+    if (a.bonus_type === 'referral_bonus' && a.custom_terms?.installments) {
+      a.custom_terms.installments.forEach(inst => {
+        if (inst.date) {
+          const d = new Date(inst.date)
+          if (d >= today && d <= in90Days) {
+            upcoming.push({ agreement: a, date: inst.date, amount: inst.amount, label: 'Referral Payment' })
           }
         }
       })

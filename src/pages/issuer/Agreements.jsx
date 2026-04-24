@@ -5,12 +5,19 @@ import { amortPreview, estimateBalanceAtDate } from '../../lib/amortization'
 
 // ── Constants ──────────────────────────────────────────────
 const BONUS_TYPES = [
-  { value: 'signing_bonus',     label: 'Signing Bonus',     sub: 'Forgivable promissory note with interest and amortization' },
-  { value: 'starting_bonus',    label: 'Starting Bonus',    sub: 'Upfront payroll bonus with repayment terms' },
-  { value: 'retention_bonus',   label: 'Retention Bonus',   sub: 'Future payout triggered by eligibility milestone' },
-  { value: 'performance_bonus', label: 'Performance Bonus', sub: 'Payout triggered by measurable milestones' },
-  { value: 'custom',            label: 'Custom',            sub: 'Non-standard agreement structure' },
+  { value: 'signing_bonus',         label: 'Signing Bonus',                         sub: 'Forgivable promissory note with interest and amortization' },
+  { value: 'starting_bonus',        label: 'Starting Bonus',                        sub: 'Upfront payroll bonus with repayment terms' },
+  { value: 'relocation_bonus',      label: 'Relocation Bonus (Promissory Note)',    sub: 'Forgivable promissory note for relocation expenses' },
+  { value: 'tuition_reimbursement', label: 'Tuition / CE Reimbursement (Promissory Note)', sub: 'Forgivable promissory note for tuition or continuing education' },
+  { value: 'retention_bonus',       label: 'Retention Bonus',                       sub: 'Future payout triggered by eligibility milestone' },
+  { value: 'performance_bonus',     label: 'Performance Bonus',                     sub: 'Payout triggered by measurable milestones' },
+  { value: 'referral_bonus',        label: 'Referral Bonus',                        sub: 'Scheduled payout for an employee referral' },
+  { value: 'custom',                label: 'Custom',                                sub: 'Non-standard agreement structure' },
 ]
+
+// Types that use the promissory-note form and generate an amortization schedule.
+const PROMISSORY_NOTE_TYPES = ['signing_bonus', 'starting_bonus', 'relocation_bonus', 'tuition_reimbursement']
+const isPromissoryNoteType = t => PROMISSORY_NOTE_TYPES.includes(t)
 
 const INTEREST_RATE_TYPES = [
   { value: 'fixed',       label: 'Fixed Rate' },
@@ -528,6 +535,53 @@ function PerformanceBonusForm({ form, set }) {
   )
 }
 
+// ── Form: Relocation Bonus ─────────────────────────────────
+// Identical structure to a signing bonus — forgivable promissory note
+// with interest and amortization schedule. Reuses SigningBonusForm.
+function RelocationBonusForm({ form, set }) {
+  return <SigningBonusForm form={form} set={set} />
+}
+
+// ── Form: Tuition / CE Reimbursement ───────────────────────
+// Promissory note with an extra Program / Institution field
+// persisted to custom_terms.program_institution.
+function TuitionBonusForm({ form, set }) {
+  const programInstitution = form.custom_terms?.program_institution ?? ''
+  return (
+    <>
+      <SectionLabel>Program Details</SectionLabel>
+      <Field
+        label="Program / Institution" required
+        value={programInstitution}
+        onChange={v => set('custom_terms', { ...form.custom_terms, program_institution: v })}
+        placeholder="e.g. State University Doctor of Nursing Practice"
+        hint="Program or institution the reimbursement covers"
+      />
+      <SigningBonusForm form={form} set={set} />
+    </>
+  )
+}
+
+// ── Form: Referral Bonus ───────────────────────────────────
+// Milestone/installment structure (like retention) with an extra
+// Referred Employee Name field persisted to custom_terms.referred_employee_name.
+function ReferralBonusForm({ form, set }) {
+  const referred = form.custom_terms?.referred_employee_name ?? ''
+  return (
+    <>
+      <SectionLabel>Referral Details</SectionLabel>
+      <Field
+        label="Referred Employee Name" required
+        value={referred}
+        onChange={v => set('custom_terms', { ...form.custom_terms, referred_employee_name: v })}
+        placeholder="Name of the referred employee"
+        hint="Who was referred — for audit trail"
+      />
+      <RetentionBonusForm form={form} set={set} />
+    </>
+  )
+}
+
 // ── Form: Custom ───────────────────────────────────────────
 function CustomBonusForm({ form, set }) {
   return (
@@ -694,7 +748,7 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
     }
 
     const custom_terms = { ...form.custom_terms }
-    if (form.bonus_type === 'signing_bonus' && form.pn_dates_differ && form.disbursement_date) {
+    if (isPromissoryNoteType(form.bonus_type) && form.pn_dates_differ && form.disbursement_date) {
       custom_terms.disbursement_date = form.disbursement_date
     }
 
@@ -740,8 +794,8 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
     setSaving(false)
     if (err) { setError(err.message); return }
 
-    // Fire amortization schedule generation for signing and starting bonuses
-    if (savedId && ['signing_bonus', 'starting_bonus'].includes(form.bonus_type)) {
+    // Fire amortization schedule generation for all promissory-note types
+    if (savedId && isPromissoryNoteType(form.bonus_type)) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         supabase.functions.invoke('generate-amortization', {
           body: { agreement_id: savedId },
@@ -824,11 +878,14 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
             )}
 
             {/* Type-specific form */}
-            {form.bonus_type === 'signing_bonus'     && <SigningBonusForm     form={form} set={set} />}
-            {form.bonus_type === 'starting_bonus'    && <StartingBonusForm    form={form} set={set} />}
-            {form.bonus_type === 'retention_bonus'   && <RetentionBonusForm   form={form} set={set} />}
-            {form.bonus_type === 'performance_bonus' && <PerformanceBonusForm form={form} set={set} />}
-            {form.bonus_type === 'custom'            && <CustomBonusForm      form={form} set={set} />}
+            {form.bonus_type === 'signing_bonus'         && <SigningBonusForm     form={form} set={set} />}
+            {form.bonus_type === 'starting_bonus'        && <StartingBonusForm    form={form} set={set} />}
+            {form.bonus_type === 'relocation_bonus'      && <RelocationBonusForm  form={form} set={set} />}
+            {form.bonus_type === 'tuition_reimbursement' && <TuitionBonusForm     form={form} set={set} />}
+            {form.bonus_type === 'retention_bonus'       && <RetentionBonusForm   form={form} set={set} />}
+            {form.bonus_type === 'performance_bonus'     && <PerformanceBonusForm form={form} set={set} />}
+            {form.bonus_type === 'referral_bonus'        && <ReferralBonusForm    form={form} set={set} />}
+            {form.bonus_type === 'custom'                && <CustomBonusForm      form={form} set={set} />}
 
             {/* Shared: internal notes */}
             <SectionLabel>Notes</SectionLabel>
@@ -1124,10 +1181,15 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const outstanding = parseFloat(a.outstanding_balance) ?? principal
   const forgiven    = principal - outstanding
   const pct         = principal > 0 ? Math.round((forgiven / principal) * 100) : 0
-  const isPN        = a.bonus_type === 'signing_bonus'
-  const isStarting  = a.bonus_type === 'starting_bonus'
-  const isRetention = a.bonus_type === 'retention_bonus'
-  const isPerf      = a.bonus_type === 'performance_bonus'
+  const isPN         = a.bonus_type === 'signing_bonus'
+  const isStarting   = a.bonus_type === 'starting_bonus'
+  const isRelocation = a.bonus_type === 'relocation_bonus'
+  const isTuition    = a.bonus_type === 'tuition_reimbursement'
+  const isRetention  = a.bonus_type === 'retention_bonus'
+  const isPerf       = a.bonus_type === 'performance_bonus'
+  const isReferral   = a.bonus_type === 'referral_bonus'
+  const isAmortized  = isPromissoryNoteType(a.bonus_type)
+  const isInstallment = isRetention || isReferral
 
   async function loadSchedule() {
     if (schedule) { setShowSchedule(s => !s); return }
@@ -1195,8 +1257,8 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             )}
           </div>
 
-          {/* Balance — signing + starting */}
-          {(isPN || isStarting) && (
+          {/* Balance — all promissory-note types */}
+          {isAmortized && (
             <Section title="Balance">
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
@@ -1219,19 +1281,19 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </Section>
           )}
 
-          {/* Financial terms */}
+          {/* Financial terms — schedule-related rows only for amortized types */}
           <Section title="Financial Terms">
             <div className="grid grid-cols-2 gap-3">
               <Row label="Principal Amount"    value={fmt(a.principal_amount)} />
-              {a.interest_rate && <Row label="Interest Rate" value={`${a.interest_rate}% ${RATE_TYPES[a.interest_rate_type] ?? ''}`} />}
-              {a.forgiveness_frequency && <Row label="Forgiveness Frequency" value={FREQ[a.forgiveness_frequency]} />}
-              {a.forgiveness_periods   && <Row label="Forgiveness Periods"   value={`${a.forgiveness_periods} periods`} />}
-              {a.forgiveness_amount_per_period && <Row label="Per Period" value={fmt(a.forgiveness_amount_per_period)} />}
+              {isAmortized && a.interest_rate            && <Row label="Interest Rate" value={`${a.interest_rate}% ${RATE_TYPES[a.interest_rate_type] ?? ''}`} />}
+              {isAmortized && a.forgiveness_frequency    && <Row label="Forgiveness Frequency" value={FREQ[a.forgiveness_frequency]} />}
+              {isAmortized && a.forgiveness_periods      && <Row label="Forgiveness Periods"   value={`${a.forgiveness_periods} periods`} />}
+              {isAmortized && a.forgiveness_amount_per_period && <Row label="Per Period" value={fmt(a.forgiveness_amount_per_period)} />}
             </div>
           </Section>
 
           {/* Amortization schedule */}
-          {(isPN || isStarting) && (
+          {isAmortized && (
             <Section title="Forgiveness Schedule">
               <button onClick={loadSchedule}
                 className="flex items-center gap-2 text-brand-400 hover:text-brand-300 text-xs font-medium transition mb-2">
@@ -1290,9 +1352,14 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </Section>
           )}
 
-          {/* Retention payments */}
-          {isRetention && a.custom_terms?.installments?.length > 0 && (
+          {/* Retention / Referral installments */}
+          {isInstallment && a.custom_terms?.installments?.length > 0 && (
             <Section title="Payment Schedule">
+              {isReferral && a.custom_terms?.referred_employee_name && (
+                <p className="text-slate-400 text-sm mb-3">
+                  Referred: <span className="text-slate-200 font-medium">{a.custom_terms.referred_employee_name}</span>
+                </p>
+              )}
               <div className="flex flex-col gap-2">
                 {a.custom_terms.installments.map((inst, i) => (
                   <div key={i} className="flex items-center justify-between px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg">
@@ -1301,6 +1368,13 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                   </div>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* Tuition program */}
+          {isTuition && a.custom_terms?.program_institution && (
+            <Section title="Program">
+              <p className="text-slate-200 text-sm">{a.custom_terms.program_institution}</p>
             </Section>
           )}
 
@@ -1422,7 +1496,7 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           )}
 
           {/* DocuSign status */}
-          {(isPN || isStarting) && (
+          {isAmortized && (
             <Section title="Document Execution">
               {a.docusign_envelope_id ? (
                 <div className="flex flex-col gap-2">
@@ -1458,7 +1532,7 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
           )}
 
           {/* Resignation calculator */}
-          {(isPN || isStarting) && a.status === 'active' && (
+          {isAmortized && a.status === 'active' && (
             <Section title="Resignation Estimator">
               <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
               <div className="mt-3 flex items-end gap-2 flex-wrap">
@@ -1550,7 +1624,7 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
 
         <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex flex-col gap-2">
           {/* Send for Signature */}
-          {(isPN || isStarting) && !a.docusign_envelope_id && ['draft', 'onboarding', 'active'].includes(a.status) && (
+          {isAmortized && !a.docusign_envelope_id && ['draft', 'onboarding', 'active'].includes(a.status) && (
             <button
               onClick={() => { setShowSendSig(true); setSigError(null); setSigSuccess(null) }}
               className="w-full py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition flex items-center justify-center gap-2">

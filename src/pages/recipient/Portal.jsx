@@ -10,12 +10,17 @@ const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
 const fmtDateShort = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 const BONUS_TYPE_LABELS = {
-  signing_bonus:     'Signing Bonus — Promissory Note',
-  starting_bonus:    'Starting Bonus',
-  retention_bonus:   'Retention Bonus',
-  performance_bonus: 'Performance Bonus',
-  custom:            'Custom Agreement',
+  signing_bonus:         'Signing Bonus — Promissory Note',
+  starting_bonus:        'Starting Bonus',
+  relocation_bonus:      'Relocation Bonus — Promissory Note',
+  tuition_reimbursement: 'Tuition / CE Reimbursement — Promissory Note',
+  retention_bonus:       'Retention Bonus',
+  performance_bonus:     'Performance Bonus',
+  referral_bonus:        'Referral Bonus',
+  custom:                'Custom Agreement',
 }
+
+const PROMISSORY_NOTE_TYPES = ['signing_bonus', 'starting_bonus', 'relocation_bonus', 'tuition_reimbursement']
 
 const FREQ_LABELS = {
   biweekly: 'Biweekly', semi_monthly: 'Semi-Monthly', monthly: 'Monthly',
@@ -129,7 +134,7 @@ function AgreementCard({ agreement }) {
   function handleExpand() {
     const newExpanded = !expanded
     setExpanded(newExpanded)
-    if (newExpanded && (isPN || isStarting)) loadSchedule()
+    if (newExpanded && isAmortized) loadSchedule()
   }
   const principal    = parseFloat(agreement.principal_amount) || 0
   const outstanding  = parseFloat(agreement.outstanding_balance) ?? principal
@@ -138,8 +143,13 @@ function AgreementCard({ agreement }) {
   const elig         = agreement.eligibility_criteria ?? {}
   const isPN         = agreement.bonus_type === 'signing_bonus'
   const isStarting   = agreement.bonus_type === 'starting_bonus'
+  const isRelocation = agreement.bonus_type === 'relocation_bonus'
+  const isTuition    = agreement.bonus_type === 'tuition_reimbursement'
   const isRetention  = agreement.bonus_type === 'retention_bonus'
   const isPerf       = agreement.bonus_type === 'performance_bonus'
+  const isReferral   = agreement.bonus_type === 'referral_bonus'
+  const isAmortized  = PROMISSORY_NOTE_TYPES.includes(agreement.bonus_type)
+  const isInstallment = isRetention || isReferral
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -158,8 +168,8 @@ function AgreementCard({ agreement }) {
           }`}>{agreement.status}</span>
         </div>
 
-        {/* Signing + Starting — balance and progress */}
-        {(isPN || isStarting) && (
+        {/* Promissory-note types — balance and progress */}
+        {isAmortized && (
           <>
             <div className="grid grid-cols-3 gap-4 mb-5">
               <div>
@@ -191,8 +201,8 @@ function AgreementCard({ agreement }) {
           </>
         )}
 
-        {/* Retention — payment schedule */}
-        {isRetention && agreement.custom_terms?.installments?.length > 0 && (
+        {/* Retention / Referral — payment schedule */}
+        {isInstallment && agreement.custom_terms?.installments?.length > 0 && (
           <div>
             <p className="text-slate-400 text-xs mb-3">Payment Schedule</p>
             <div className="flex flex-col gap-2">
@@ -206,6 +216,14 @@ function AgreementCard({ agreement }) {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Tuition — program / institution */}
+        {isTuition && agreement.custom_terms?.program_institution && (
+          <div className="mt-4">
+            <p className="text-slate-400 text-xs mb-1">Program / Institution</p>
+            <p className="text-slate-200 text-sm">{agreement.custom_terms.program_institution}</p>
           </div>
         )}
 
@@ -265,7 +283,7 @@ function AgreementCard({ agreement }) {
             )}
 
             {/* Amortization schedule */}
-            {(isPN || isStarting) && (
+            {isAmortized && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Forgiveness Schedule</p>
                 <p className="text-slate-500 text-xs mb-3">Full period-by-period breakdown. Total forgiven each period (principal + interest) is reported to payroll as taxable income.</p>
@@ -333,7 +351,7 @@ function AgreementCard({ agreement }) {
             )}
 
             {/* Balance estimator */}
-            {(isPN || isStarting) && agreement.status === 'active' && (
+            {isAmortized && agreement.status === 'active' && (
               <BalanceEstimator agreement={agreement} />
             )}
           </div>

@@ -58,10 +58,14 @@ Deno.serve(async (req) => {
     const hrEmail = settings?.portal_hr_contact_email || issuer?.primary_contact_email || ''
 
     const BONUS_TYPE_LABELS: Record<string, string> = {
-      signing_bonus:     'Signing Bonus (Promissory Note)',
-      starting_bonus:    'Starting Bonus',
-      retention_bonus:   'Retention Bonus',
-      performance_bonus: 'Performance Bonus',
+      signing_bonus:         'Signing Bonus (Promissory Note)',
+      starting_bonus:        'Starting Bonus',
+      relocation_bonus:      'Relocation Bonus (Promissory Note)',
+      tuition_reimbursement: 'Tuition / CE Reimbursement (Promissory Note)',
+      retention_bonus:       'Retention Bonus',
+      performance_bonus:     'Performance Bonus',
+      referral_bonus:        'Referral Bonus',
+      custom:                'Custom Agreement',
     }
 
     const html = `

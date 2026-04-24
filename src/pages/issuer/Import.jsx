@@ -13,7 +13,7 @@ const TEMPLATE_COLUMNS = [
   'recipient_state','agreement_number','status','notes',
 ]
 
-const BONUS_TYPES    = ['signing_bonus','starting_bonus','retention_bonus','performance_bonus','custom']
+const BONUS_TYPES    = ['signing_bonus','starting_bonus','relocation_bonus','tuition_reimbursement','retention_bonus','performance_bonus','referral_bonus','custom']
 const RATE_TYPES     = ['fixed','zero','afr_short','afr_mid','prime_based']
 const FREQ_TYPES     = ['biweekly','semi_monthly','monthly','quarterly','annual']
 const VALID_STATUSES = ['draft','onboarding','active','forgiven','terminated','collected','cancelled']

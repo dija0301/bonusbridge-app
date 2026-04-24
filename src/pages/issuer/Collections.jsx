@@ -6,8 +6,14 @@ const fmt     = n => new Intl.NumberFormat('en-US', { style: 'currency', currenc
 const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 const BONUS_TYPE_LABELS = {
-  signing_bonus: 'Signing Bonus', starting_bonus: 'Starting Bonus',
-  retention_bonus: 'Retention Bonus', performance_bonus: 'Performance Bonus', custom: 'Custom',
+  signing_bonus:         'Signing Bonus',
+  starting_bonus:        'Starting Bonus',
+  relocation_bonus:      'Relocation Bonus',
+  tuition_reimbursement: 'Tuition / CE Reimbursement',
+  retention_bonus:       'Retention Bonus',
+  performance_bonus:     'Performance Bonus',
+  referral_bonus:        'Referral Bonus',
+  custom:                'Custom',
 }
 
 const STATUS_STYLES = {
