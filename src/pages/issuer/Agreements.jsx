@@ -680,6 +680,10 @@ function StateLawBanner({ rules, acknowledged, onAcknowledge }) {
 }
 
 // ── Agreement drawer ───────────────────────────────────────
+function useFeatures() {
+  return useAuth().features ?? {}
+}
+
 const EMPTY_FORM = {
   bonus_type: 'signing_bonus', recipient_id: '', agreement_number: '',
   principal_amount: '', interest_rate: '', interest_rate_type: 'fixed',
@@ -693,6 +697,7 @@ const EMPTY_FORM = {
 }
 
 function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) {
+  const features = useFeatures()
   const [form, setForm]     = useState(() => !agreement ? { ...EMPTY_FORM } : {
     ...EMPTY_FORM, ...agreement,
     pn_dates_differ:         !!agreement.custom_terms?.disbursement_date,
@@ -711,9 +716,10 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
-  // Load state rules whenever state or bonus type changes
+  // Load state rules whenever state or bonus type changes (gated by feature flag)
   useEffect(() => {
     async function loadRules() {
+      if (!features.state_law_engine) { setStateRules([]); return }
       if (!form.recipient_state || !form.bonus_type) { setStateRules([]); return }
       const { data } = await supabase
         .from('state_bonus_rules')
@@ -725,7 +731,7 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
       setStateLawAck(false)
     }
     loadRules()
-  }, [form.recipient_state, form.bonus_type])
+  }, [form.recipient_state, form.bonus_type, features.state_law_engine])
 
   async function handleSave(e) {
     e.preventDefault()
@@ -1157,6 +1163,7 @@ export default function Agreements() {
 
 // ── Agreement detail panel ─────────────────────────────────
 function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
+  const features = useFeatures()
   const fmt     = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
   const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
   const fmtShort = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
@@ -1495,8 +1502,8 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </Section>
           )}
 
-          {/* DocuSign status */}
-          {isAmortized && (
+          {/* DocuSign status — gated by feature flag */}
+          {isAmortized && features.docusign && (
             <Section title="Document Execution">
               {a.docusign_envelope_id ? (
                 <div className="flex flex-col gap-2">
@@ -1623,8 +1630,8 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
         </div>
 
         <div className="shrink-0 px-5 py-4 border-t border-slate-800 flex flex-col gap-2">
-          {/* Send for Signature */}
-          {isAmortized && !a.docusign_envelope_id && ['draft', 'onboarding', 'active'].includes(a.status) && (
+          {/* Send for Signature — gated by feature flag */}
+          {features.docusign && isAmortized && !a.docusign_envelope_id && ['draft', 'onboarding', 'active'].includes(a.status) && (
             <button
               onClick={() => { setShowSendSig(true); setSigError(null); setSigSuccess(null) }}
               className="w-full py-2.5 rounded-lg border border-brand-600 text-brand-400 hover:bg-brand-600/10 text-sm font-medium transition flex items-center justify-center gap-2">

@@ -152,7 +152,7 @@ function ComingSoonContent({ description, features }) {
 
 // ── Main Settings page ─────────────────────────────────────
 export default function Settings() {
-  const { profile } = useAuth()
+  const { profile, features } = useAuth()
   const issuerId    = profile?.issuer_id
 
   const [org, setOrg]               = useState(null)
@@ -345,7 +345,8 @@ export default function Settings() {
             hint="Allows recipients to edit their personal email, mobile phone, and mailing address from their portal" />
         </SectionCard>
 
-        {/* ── Notification Preferences ── */}
+        {/* ── Notification Preferences — gated by feature flag ── */}
+        {features?.notifications && (
         <SectionCard title="Notification Preferences" description="Configure when and how recipients are notified">
 
           <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide">Forgiveness Period Reminders</p>
@@ -412,6 +413,7 @@ export default function Settings() {
             onChange={v => setN('allow_recipient_optout', v)}
             hint="Transactional emails (acknowledgment, status changes) cannot be opted out of" />
         </SectionCard>
+        )}
 
         {/* ── Custom Org Fields ── */}
         <SectionCard title="Custom Organization Fields" description="Add up to 10 custom fields for recipients — cost center, location, clinic ID, or any internal identifier needed for payroll or reporting">
@@ -482,7 +484,8 @@ export default function Settings() {
             ]} />
         </SectionCard>
 
-        {/* ── DocuSign Integration ── */}
+        {/* ── DocuSign Integration — gated by feature flag ── */}
+        {features?.docusign && (
         <SectionCard
           title="DocuSign Integration"
           description="Execute promissory notes digitally — pre-filled from agreement data and sent for signature">
@@ -535,6 +538,7 @@ export default function Settings() {
             Need help setting up your document templates? Document integration and template mapping is included in the Portfolio Kickstart service. <a href="mailto:thebonusbridgeteam@gmail.com" className="text-brand-400 hover:text-brand-300">Contact us →</a>
           </p>
         </SectionCard>
+        )}
 
         {/* ── Integrations — Coming Soon ── */}
         <SectionCard

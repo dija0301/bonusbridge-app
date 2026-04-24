@@ -3,10 +3,22 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+// Every feature flag the app knows about. Default reflects the expected baseline
+// for a newly-onboarded client if no rows exist in issuer_features yet.
+const DEFAULT_FEATURES = {
+  state_law_engine:   true,
+  notifications:      true,
+  bulk_export:        true,
+  departure_response: true,
+  docusign:           false,
+  plaid_verification: false,
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession]           = useState(undefined)
   const [profile, setProfile]           = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [features, setFeatures]         = useState(DEFAULT_FEATURES)
   const [previewIssuerId, setPreviewIssuerId] = useState(null)
   const [previewIssuer, setPreviewIssuer]     = useState(null)
 
@@ -63,6 +75,26 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Load issuer_features for the currently-effective issuer (preview or own).
+  // Missing rows fall back to DEFAULT_FEATURES so nothing breaks for issuers
+  // who haven't been seeded yet.
+  useEffect(() => {
+    const effectiveIssuerId = previewIssuerId || profile?.issuer_id
+    if (!effectiveIssuerId) {
+      setFeatures(DEFAULT_FEATURES)
+      return
+    }
+    supabase
+      .from('issuer_features')
+      .select('feature, enabled')
+      .eq('issuer_id', effectiveIssuerId)
+      .then(({ data }) => {
+        const flags = { ...DEFAULT_FEATURES }
+        ;(data ?? []).forEach(row => { flags[row.feature] = row.enabled })
+        setFeatures(flags)
+      })
+  }, [profile?.issuer_id, previewIssuerId])
+
   async function signIn(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
@@ -90,6 +122,7 @@ export function AuthProvider({ children }) {
       session, profile: effectiveProfile, role, displayName,
       signIn, signOut, loading,
       isPreviewMode, previewIssuer,
+      features,
     }}>
       {children}
     </AuthContext.Provider>

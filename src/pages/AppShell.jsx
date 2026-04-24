@@ -2,12 +2,12 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const ISSUER_NAV = [
-  { to: '/issuer',             label: 'Overview',          icon: OverviewIcon },
-  { to: '/issuer/agreements',  label: 'Agreements',        icon: AgreementsIcon },
-  { to: '/issuer/recipients',  label: 'Recipients',        icon: RecipientsIcon },
-  { to: '/issuer/collections', label: 'Departure Response', icon: CollectionsIcon },
-  { to: '/issuer/import',      label: 'Import',             icon: ImportIcon },
-  { to: '/issuer/reports',     label: 'Reports',            icon: ReportsIcon },
+  { to: '/issuer',             label: 'Overview',           icon: OverviewIcon },
+  { to: '/issuer/agreements',  label: 'Agreements',         icon: AgreementsIcon },
+  { to: '/issuer/recipients',  label: 'Recipients',         icon: RecipientsIcon },
+  { to: '/issuer/collections', label: 'Departure Response', icon: CollectionsIcon, requires: 'departure_response' },
+  { to: '/issuer/import',      label: 'Import',             icon: ImportIcon,      requires: 'bulk_export' },
+  { to: '/issuer/reports',     label: 'Reports',            icon: ReportsIcon,     requires: 'bulk_export' },
   { to: '/issuer/settings',    label: 'Settings',           icon: SettingsIcon },
 ]
 
@@ -26,9 +26,9 @@ const roleNav = {
 }
 
 export default function AppShell() {
-  const { profile, role, displayName, signOut, isPreviewMode, previewIssuer } = useAuth()
+  const { profile, role, displayName, signOut, isPreviewMode, previewIssuer, features } = useAuth()
   const navigate = useNavigate()
-  const nav = roleNav[role] ?? ISSUER_NAV
+  const nav = (roleNav[role] ?? ISSUER_NAV).filter(item => !item.requires || features?.[item.requires])
 
   async function handleSignOut() {
     await signOut()

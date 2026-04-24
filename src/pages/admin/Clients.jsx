@@ -10,11 +10,12 @@ const PLAN_TIERS = [
 ]
 
 const FEATURES = [
-  { key: 'state_law_engine',   label: 'State Law Engine'    },
-  { key: 'notifications',      label: 'Notifications'       },
-  { key: 'bulk_export',        label: 'Bulk Export'         },
-  { key: 'departure_response', label: 'Departure Response'  },
-  { key: 'docusign',           label: 'DocuSign'            },
+  { key: 'state_law_engine',   label: 'State Law Engine'                        },
+  { key: 'notifications',      label: 'Notifications'                           },
+  { key: 'bulk_export',        label: 'Bulk Export'                             },
+  { key: 'departure_response', label: 'Departure Response'                      },
+  { key: 'docusign',           label: 'DocuSign'                                },
+  { key: 'plaid_verification', label: 'Plaid Account Verification', comingSoon: true },
 ]
 
 const PLAN_STYLES = {
@@ -313,12 +314,20 @@ export default function AdminClients() {
                 <p className="text-slate-500 text-xs -mt-2">Enable or disable features for this client based on their plan</p>
                 <div className="flex flex-col gap-3">
                   {FEATURES.map(f => (
-                    <label key={f.key} className="flex items-center justify-between cursor-pointer">
-                      <span className="text-slate-300 text-sm">{f.label}</span>
+                    <label key={f.key} className={`flex items-center justify-between ${f.comingSoon ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                      <span className="text-slate-300 text-sm flex items-center gap-2">
+                        {f.label}
+                        {f.comingSoon && (
+                          <span className="text-[10px] uppercase tracking-wide font-semibold text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded px-1.5 py-0.5">
+                            Coming soon
+                          </span>
+                        )}
+                      </span>
                       <div className="relative shrink-0">
                         <input type="checkbox" className="sr-only"
                           checked={!!features[f.key]}
-                          onChange={e => setFeatures(prev => ({ ...prev, [f.key]: e.target.checked }))} />
+                          disabled={f.comingSoon}
+                          onChange={e => !f.comingSoon && setFeatures(prev => ({ ...prev, [f.key]: e.target.checked }))} />
                         <div className={`w-9 h-5 rounded-full transition ${features[f.key] ? 'bg-brand-600' : 'bg-slate-700'}`} />
                         <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${features[f.key] ? 'translate-x-4' : ''}`} />
                       </div>
