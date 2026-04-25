@@ -106,11 +106,13 @@ export default function AdminClients() {
       admin_notes:           selected.admin_notes,
     }).eq('id', selected.id)
 
-    // Save feature flags
+    // Save feature flags — must specify onConflict so the (issuer_id, feature)
+    // unique constraint is used for conflict resolution, not the primary key.
     for (const [feature, enabled] of Object.entries(features)) {
-      await supabase.from('issuer_features').upsert({
-        issuer_id: selected.id, feature, enabled, updated_at: new Date().toISOString()
-      })
+      await supabase.from('issuer_features').upsert(
+        { issuer_id: selected.id, feature, enabled, updated_at: new Date().toISOString() },
+        { onConflict: 'issuer_id,feature' }
+      )
     }
 
     setSaving(false)
