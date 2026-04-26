@@ -139,6 +139,17 @@ const RATE_TYPE_LABELS: Record<string, string> = {
   zero:       '0% (non-interest bearing)',
 }
 
+const BONUS_TYPE_LABELS: Record<string, string> = {
+  signing_bonus:         'Signing Bonus (Promissory Note)',
+  starting_bonus:        'Starting Bonus (Promissory Note)',
+  relocation_bonus:      'Relocation Bonus (Promissory Note)',
+  tuition_reimbursement: 'Tuition / CE Reimbursement (Promissory Note)',
+  retention_bonus:       'Retention Bonus',
+  performance_bonus:     'Performance Bonus',
+  referral_bonus:        'Referral Bonus',
+  custom:                'Custom Agreement',
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -172,8 +183,11 @@ Deno.serve(async (req) => {
     const periods   = parseInt(ag.forgiveness_periods) || 1
     const perPeriod = calcPerPeriodAmount(principal, rate, periods)
 
+    const bonusTypeLabel = BONUS_TYPE_LABELS[ag.bonus_type] ?? ag.bonus_type ?? ''
+
     const tabs = {
       textTabs: [
+        { tabLabel: 'bonus_type_label',      value: bonusTypeLabel },
         { tabLabel: 'agreement_number',      value: ag.agreement_number ?? '' },
         { tabLabel: 'effective_date',         value: formatDate(ag.effective_date) },
         { tabLabel: 'execution_date',         value: formatDate(ag.execution_date) },
@@ -205,8 +219,8 @@ Deno.serve(async (req) => {
     const envelope = {
       templateId,
       status: 'sent',
-      emailSubject: `Signing Bonus Agreement — ${issuer?.name ?? ''}`,
-      emailBlurb: `Please review and sign your Forgivable Promissory Note with ${issuer?.name ?? ''}. This document outlines the terms of your signing bonus agreement.`,
+      emailSubject: `${bonusTypeLabel} — ${issuer?.name ?? ''}`,
+      emailBlurb: `Please review and sign your ${bonusTypeLabel} with ${issuer?.name ?? ''}. This document outlines the terms of your bonus agreement.`,
       templateRoles: [
         {
           roleName:  'Recipient',
