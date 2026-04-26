@@ -1161,6 +1161,82 @@ export default function Agreements() {
   )
 }
 
+// ── Resignation Estimator ──────────────────────────────────
+// Extracted so dropdown state stays local. Updating state inside this
+// component does NOT re-render the parent AgreementDetailPanel — so the
+// scroll position of the panel is preserved when picking dates.
+function ResignationEstimator({ agreement }) {
+  const [m, setM]       = useState('')
+  const [d, setD]       = useState('')
+  const [y, setY]       = useState('')
+  const [date, setDate] = useState('')
+  const [est, setEst]   = useState(null)
+  const fmtMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
+
+  function recompute(nm, nd, ny) {
+    if (nm && nd && ny) {
+      const iso = `${ny}-${nm}-${nd}`
+      setDate(iso)
+      const r = estimateBalanceAtDate(agreement, iso)
+      setEst(r?.balance ?? r ?? null)
+    }
+  }
+
+  const selectClass = "bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition"
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-xs font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">Resignation Estimator</span>
+        <div className="flex-1 h-px bg-slate-800" />
+      </div>
+      <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
+      <div className="mt-3 flex items-end gap-2 flex-wrap">
+        <div>
+          <label className="block text-slate-400 text-xs font-medium mb-1.5">Month</label>
+          <select value={m} onChange={e => { const v = e.target.value; setM(v); recompute(v, d, y) }} className={selectClass}>
+            <option value="">Month</option>
+            {['January','February','March','April','May','June','July','August','September','October','November','December'].map((mm, i) => (
+              <option key={mm} value={String(i + 1).padStart(2, '0')}>{mm}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-slate-400 text-xs font-medium mb-1.5">Day</label>
+          <select value={d} onChange={e => { const v = e.target.value; setD(v); recompute(m, v, y) }} className={selectClass}>
+            <option value="">Day</option>
+            {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(dd => (
+              <option key={dd} value={dd}>{parseInt(dd)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-slate-400 text-xs font-medium mb-1.5">Year</label>
+          <select value={y} onChange={e => { const v = e.target.value; setY(v); recompute(m, d, v) }} className={selectClass}>
+            <option value="">Year</option>
+            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map(yy => (
+              <option key={yy} value={yy}>{yy}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {est !== null && date && (
+        <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
+            <p className="text-white text-xl font-semibold font-mono">{fmtMoney(est)}</p>
+          </div>
+          <p className="text-slate-500 text-xs leading-relaxed">
+            Estimated gross repayment amount as of {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
+            This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
+            Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Agreement detail panel ─────────────────────────────────
 function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const features = useFeatures()
@@ -1172,11 +1248,6 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
   const [schedule, setSchedule]         = useState(null)
   const [schedLoading, setSchedLoading] = useState(false)
   const [showSchedule, setShowSchedule] = useState(false)
-  const [resignEst, setResignEst]       = useState(null)
-  const [resignDate, setResignDate]     = useState('')
-  const [resignM, setResignM]           = useState('')
-  const [resignD, setResignD]           = useState('')
-  const [resignY, setResignY]           = useState('')
   const [showSendSig, setShowSendSig]   = useState(false)
   const [sigEmail, setSigEmail]         = useState('')
   const [sigName, setSigName]           = useState('')
@@ -1538,86 +1609,9 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
             </Section>
           )}
 
-          {/* Resignation calculator */}
+          {/* Resignation calculator — extracted to isolate state changes from the rest of the panel */}
           {isAmortized && a.status === 'active' && (
-            <Section title="Resignation Estimator">
-              <p className="text-slate-400 text-sm">Select a hypothetical departure date to estimate the gross outstanding balance as of that date.</p>
-              <div className="mt-3 flex items-end gap-2 flex-wrap">
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Month</label>
-                  <select value={resignM}
-                    onChange={e => {
-                      const m = e.target.value
-                      setResignM(m)
-                      if (m && resignD && resignY) {
-                        const iso = `${resignY}-${m}-${resignD}`
-                        setResignDate(iso)
-                        const r = estimateBalanceAtDate(a, iso)
-                        setResignEst(r?.balance ?? r ?? null)
-                      }
-                    }}
-                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                    <option value="">Month</option>
-                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m,i) => (
-                      <option key={m} value={String(i+1).padStart(2,'0')}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Day</label>
-                  <select value={resignD}
-                    onChange={e => {
-                      const d = e.target.value
-                      setResignD(d)
-                      if (resignM && d && resignY) {
-                        const iso = `${resignY}-${resignM}-${d}`
-                        setResignDate(iso)
-                        const r = estimateBalanceAtDate(a, iso)
-                        setResignEst(r?.balance ?? r ?? null)
-                      }
-                    }}
-                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                    <option value="">Day</option>
-                    {Array.from({length:31}, (_,i) => String(i+1).padStart(2,'0')).map(d => (
-                      <option key={d} value={d}>{parseInt(d)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5">Year</label>
-                  <select value={resignY}
-                    onChange={e => {
-                      const y = e.target.value
-                      setResignY(y)
-                      if (resignM && resignD && y) {
-                        const iso = `${y}-${resignM}-${resignD}`
-                        setResignDate(iso)
-                        const r = estimateBalanceAtDate(a, iso)
-                        setResignEst(r?.balance ?? r ?? null)
-                      }
-                    }}
-                    className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500 transition">
-                    <option value="">Year</option>
-                    {Array.from({length:10}, (_,i) => new Date().getFullYear() - 2 + i).map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {resignEst !== null && resignDate && (
-                <div className="mt-3 bg-slate-800/60 border border-slate-700 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-slate-300 text-sm font-medium">Estimated Outstanding Balance</p>
-                    <p className="text-white text-xl font-semibold font-mono">{fmt(resignEst)}</p>
-                  </div>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Estimated gross repayment amount as of {new Date(resignDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
-                    This figure reflects principal and accrued interest and does not account for tax withholding, offsets, or other deductions.
-                    Actual repayment amount is subject to review and confirmation. Consult legal counsel before communicating repayment amounts to employees.
-                  </p>
-                </div>
-              )}
-            </Section>
+            <ResignationEstimator agreement={a} />
           )}
 
           {/* Notes */}
