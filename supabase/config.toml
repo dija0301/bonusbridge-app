@@ -1,0 +1,27 @@
+# Supabase project config. Currently this file only configures edge functions —
+# specifically per-function verify_jwt settings. Other Supabase settings
+# (db, api, auth, etc.) remain managed via the dashboard.
+#
+# verify_jwt = true  → Supabase rejects requests without a valid Authorization
+#                       Bearer token before the function runs. Use this for any
+#                       function that reads/writes user data.
+# verify_jwt = false → Function runs for unauthenticated requests too. Only
+#                       use this for functions that handle external webhooks
+#                       (DocuSign, Stripe, etc.) where the caller signs the
+#                       request a different way.
+
+project_id = "tlyvvuqnambojiiagrvt"
+
+[functions.generate-amortization]
+verify_jwt = true
+
+[functions.send-for-signature]
+verify_jwt = true
+
+[functions.send-departure-notice]
+verify_jwt = true
+
+# DocuSign Connect calls this webhook and authenticates via HMAC signature
+# on the body, NOT a JWT. Must stay false.
+[functions.docusign-webhook]
+verify_jwt = false

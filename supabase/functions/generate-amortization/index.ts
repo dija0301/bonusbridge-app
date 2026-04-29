@@ -65,6 +65,22 @@ Deno.serve(async (req) => {
 
     if (agErr || !ag) return new Response(JSON.stringify({ error: 'Agreement not found' }), { status: 404 })
 
+    // Rate limit: 30 calls per minute per issuer.
+    const { data: rateAllowed, error: rateErr } = await supabase.rpc('check_and_increment_rate_limit', {
+      p_issuer_id:      ag.issuer_id,
+      p_function_name:  'generate-amortization',
+      p_max_calls:      30,
+      p_window_seconds: 60,
+    })
+    if (rateErr) {
+      console.warn('Rate limit check failed (continuing):', rateErr.message)
+    } else if (rateAllowed === false) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded — try again in a moment' }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Only generate for promissory-note types
     const PROMISSORY_NOTE_TYPES = ['signing_bonus', 'starting_bonus', 'relocation_bonus', 'tuition_reimbursement']
     if (!PROMISSORY_NOTE_TYPES.includes(ag.bonus_type)) {

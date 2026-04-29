@@ -175,6 +175,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Agreement not found' }), { status: 404, headers: corsHeaders })
     }
 
+    // Rate limit: 10 calls per minute per issuer.
+    // DocuSign envelopes cost real money — guard against runaway loops.
+    const { data: rateAllowed, error: rateErr } = await supabase.rpc('check_and_increment_rate_limit', {
+      p_issuer_id:      ag.issuer_id,
+      p_function_name:  'send-for-signature',
+      p_max_calls:      10,
+      p_window_seconds: 60,
+    })
+    if (rateErr) {
+      console.warn('Rate limit check failed (continuing):', rateErr.message)
+    } else if (rateAllowed === false) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded — try again in a moment' }),
+        { status: 429, headers: corsHeaders }
+      )
+    }
+
     const rec    = ag.recipients
     const issuer = ag.issuers
 
