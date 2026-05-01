@@ -166,12 +166,10 @@ Deno.serve(async (req) => {
             })
 
           if (!uploadErr) {
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from('documents')
-              .getPublicUrl(filename)
-
-            updateData.signed_document_url = urlData.publicUrl
+            // Save the storage path (not a public URL). The frontend generates
+            // a short-lived signed URL when the user clicks the View button so
+            // RLS on storage.objects can gate access per-recipient/per-issuer.
+            updateData.signed_document_url = filename
           }
         }
       } catch (docErr) {

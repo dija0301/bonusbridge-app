@@ -27,6 +27,53 @@ const FREQ_LABELS = {
   quarterly: 'Quarterly', annual: 'Annual', custom: 'Custom',
 }
 
+// ── Signed document link ──────────────────────────────────
+// Same logic as the issuer side: handle both legacy public URLs and new
+// storage paths. For paths, fetch a 60-second signed URL on click so RLS
+// gates access.
+function SignedDocumentLink({ pathOrUrl, label }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
+
+  async function open() {
+    setError(null)
+    if (!pathOrUrl) return
+    if (/^https?:\/\//i.test(pathOrUrl)) {
+      window.open(pathOrUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    setLoading(true)
+    const { data, error: signErr } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(pathOrUrl, 60)
+    setLoading(false)
+    if (signErr || !data?.signedUrl) {
+      setError('Could not load your signed agreement. Please contact your HR team.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={open}
+        disabled={loading}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-brand-500/30 bg-brand-500/10 text-brand-300 hover:bg-brand-500/15 hover:border-brand-500/50 disabled:opacity-50 text-sm font-medium transition self-start"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+          <path d="M10 2v3h3"/>
+          <path d="M5 9h6M5 12h4"/>
+        </svg>
+        {loading ? 'Loading…' : label}
+      </button>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+    </div>
+  )
+}
+
 // ── Icons ──────────────────────────────────────────────────
 function CheckIcon({ className }) {
   return <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2 8 6 12 14 4"/></svg>
@@ -243,6 +290,16 @@ function AgreementCard({ agreement }) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Signed agreement — visible whenever a signed PDF is on file */}
+        {agreement.signed_document_url && (
+          <div className="mt-5">
+            <SignedDocumentLink
+              pathOrUrl={agreement.signed_document_url}
+              label="View Your Signed Agreement"
+            />
           </div>
         )}
       </div>

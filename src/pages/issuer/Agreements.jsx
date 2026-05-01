@@ -1161,6 +1161,47 @@ export default function Agreements() {
   )
 }
 
+// ── Signed document link ──────────────────────────────────
+// Handles both legacy public URLs (stored before we made the bucket private)
+// and new storage paths. For paths, fetches a 60-second signed URL on click.
+function SignedDocumentLink({ pathOrUrl, label }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
+
+  async function open() {
+    setError(null)
+    if (!pathOrUrl) return
+    if (/^https?:\/\//i.test(pathOrUrl)) {
+      window.open(pathOrUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    setLoading(true)
+    const { data, error: signErr } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(pathOrUrl, 60)
+    setLoading(false)
+    if (signErr || !data?.signedUrl) {
+      setError('Could not load the signed document. You may not have access.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={open}
+        disabled={loading}
+        className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 disabled:opacity-50 text-xs font-medium transition self-start"
+      >
+        {loading ? 'Loading…' : label}
+      </button>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+    </div>
+  )
+}
+
 // ── Resignation Estimator ──────────────────────────────────
 // Extracted so dropdown state stays local. Updating state inside this
 // component does NOT re-render the parent AgreementDetailPanel — so the
@@ -1594,10 +1635,10 @@ function AgreementDetailPanel({ agreement: a, onClose, onEdit }) {
                     </p>
                   )}
                   {a.signed_document_url && (
-                    <a href={a.signed_document_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 text-xs font-medium transition">
-                      View Signed Document →
-                    </a>
+                    <SignedDocumentLink
+                      pathOrUrl={a.signed_document_url}
+                      label="View Signed Document →"
+                    />
                   )}
                 </div>
               ) : (
