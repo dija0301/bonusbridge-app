@@ -535,7 +535,7 @@ export default function Settings() {
           </div>
 
           <p className="text-slate-500 text-xs">
-            Need help setting up your document templates? Document integration and template mapping is included in the Portfolio Kickstart service. <a href="mailto:thebonusbridgeteam@gmail.com" className="text-brand-400 hover:text-brand-300">Contact us →</a>
+            Need help setting up your document templates? Document integration and template mapping is included in the Portfolio Kickstart service. <a href="mailto:info@thebonusbridge.com" className="text-brand-400 hover:text-brand-300">Contact us →</a>
           </p>
         </SectionCard>
         )}
