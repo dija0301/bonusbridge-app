@@ -25,3 +25,8 @@ verify_jwt = true
 # on the body, NOT a JWT. Must stay false.
 [functions.docusign-webhook]
 verify_jwt = false
+
+# Called by pg_cron daily — no user JWT exists. Function itself validates
+# an X-Cron-Secret header against the CRON_SECRET env var instead.
+[functions.send-notifications]
+verify_jwt = false
