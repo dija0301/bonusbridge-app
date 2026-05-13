@@ -716,6 +716,54 @@ function AgreementDrawer({ issuerId, recipients, agreement, onClose, onSaved }) 
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
+  // On NEW agreement only: pre-fill form fields from the issuer's saved defaults.
+  // Pulls default_work_state from issuers, default_interest_rate_type /
+  // default_forgiveness_frequency / default_elig_* from notification_settings.
+  // Also auto-generates an agreement_number of {prefix}-{year}-{seq} if the
+  // issuer enabled it. Runs once on drawer mount, never overrides user edits.
+  useEffect(() => {
+    if (isEdit) return
+    let cancelled = false
+    async function loadDefaults() {
+      const [issuerRes, settingsRes] = await Promise.all([
+        supabase.from('issuers').select('default_work_state').eq('id', issuerId).maybeSingle(),
+        supabase.from('notification_settings').select('*').eq('issuer_id', issuerId).maybeSingle(),
+      ])
+      if (cancelled) return
+      const issuer   = issuerRes.data
+      const settings = settingsRes.data
+      const defaults = {}
+      if (issuer?.default_work_state)             defaults.recipient_state         = issuer.default_work_state
+      if (settings?.default_interest_rate_type)   defaults.interest_rate_type      = settings.default_interest_rate_type
+      if (settings?.default_forgiveness_frequency) defaults.forgiveness_frequency  = settings.default_forgiveness_frequency
+      if (settings?.default_elig_benefits_eligible !== undefined) defaults.elig_benefits_eligible  = !!settings.default_elig_benefits_eligible
+      if (settings?.default_elig_maintain_role     !== undefined) defaults.elig_maintain_role      = !!settings.default_elig_maintain_role
+      if (settings?.default_elig_licensure_required !== undefined) defaults.elig_licensure_required = !!settings.default_elig_licensure_required
+
+      // Auto-generate agreement_number when enabled. {prefix}-{year}-{seq}.
+      // Sequence is "count of existing agreements matching this prefix-year + 1".
+      if (settings?.agreement_number_auto && settings?.agreement_number_prefix) {
+        const year   = new Date().getFullYear()
+        const prefix = settings.agreement_number_prefix
+        const { count } = await supabase
+          .from('agreements')
+          .select('id', { count: 'exact', head: true })
+          .eq('issuer_id', issuerId)
+          .like('agreement_number', `${prefix}-${year}-%`)
+        if (!cancelled) {
+          const seq = String((count ?? 0) + 1).padStart(3, '0')
+          defaults.agreement_number = `${prefix}-${year}-${seq}`
+        }
+      }
+
+      if (Object.keys(defaults).length > 0 && !cancelled) {
+        setForm(f => ({ ...f, ...defaults }))
+      }
+    }
+    loadDefaults()
+    return () => { cancelled = true }
+  }, [isEdit, issuerId])
+
   // Load state rules whenever state or bonus type changes (gated by feature flag)
   useEffect(() => {
     async function loadRules() {
